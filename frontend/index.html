@@ -403,12 +403,12 @@
 			submitBtn.addEventListener("click", async () => {
 				showMsg("");
 				const body = {
-					siteId: Number(formSite.value),
-					start: startInput.value,
-					end: endInput.value,
-					name: nameInput.value.trim() || currentUser.name
-				};
-
+	siteId: Number(formSite.value),
+	start: startInput.value,
+	end: endInput.value,
+	// ИСПРАВЛЕНИЕ: Если поле пустое, пишем понятный текст вместо голого имени
+	name: nameInput.value.trim() || `Занятие (${currentUser.name})`
+};
 				if (currentMode === "bookings") {
 					body.date = formDate.value;
 				} else {
