@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Панель управления расписанием | ITeen Academy</title>
+		<style>
+			:root {
+				--iteen-sky: #2bbad6;
+				--iteen-dark: #0f4c81;
+				--iteen-orange: #ff9800;
+				--iteen-orange-hover: #f57c00;
+				--bg-app: #f0f4f7;
+				--card-bg: #ffffff;
+				--text-main: #374151;
+				--radius-lg: 16px;
+				--radius-sm: 10px;
+				--shadow: 0 10px 25px rgba(15, 76, 129, 0.08);
+				--transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+				background: linear-gradient(135deg, var(--iteen-sky) 0%, #199eb8 100%);
+				background-attachment: fixed;
+				color: var(--text-main);
+				padding: 40px 20px 80px 20px;
+				display: flex;
+				justify-content: center;
+			}
+
+			.app-wrapper {
+				width: 100%;
+				max-width: 960px;
+				background: var(--bg-app);
+				border-radius: 24px;
+				padding: 32px;
+				box-shadow: 0 25px 50px rgba(15, 76, 129, 0.3);
+			}
+
+			.header-block {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				border-bottom: 2px dashed #cfd8dc;
+				padding-bottom: 24px;
+				margin-bottom: 24px;
+				flex-wrap: wrap;
+				gap: 20px;
+			}
+
+			h1 {
+				font-size: 28px;
+				color: var(--iteen-dark);
+				font-weight: 800;
+			}
+			h1 span {
+				color: var(--iteen-orange);
+			}
+			.subtitle {
+				font-size: 13px;
+				color: #546e7a;
+				font-weight: 600;
+				margin-top: 4px;
+			}
+			h2 {
+				font-size: 20px;
+				color: var(--iteen-dark);
+				margin-bottom: 18px;
+				font-weight: 700;
+			}
+
+			.view-toggle {
+				display: flex;
+				background: #e2e8f0;
+				padding: 4px;
+				border-radius: var(--radius-sm);
+			}
+
+			.btn-toggle {
+				height: 38px;
+				padding: 0 18px;
+				font-size: 14px;
+				font-weight: 700;
+				background: transparent;
+				color: #64748b;
+				border-radius: 8px;
+				border: none;
+				cursor: pointer;
+				transition: var(--transition);
+			}
+
+			.btn-toggle.active {
+				background: var(--card-bg);
+				color: var(--iteen-dark);
+				box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+			}
+
+			.filter-card,
+			.form-card,
+			.matrix-section {
+				background: var(--card-bg);
+				border-radius: var(--radius-lg);
+				padding: 24px;
+				box-shadow: var(--shadow);
+				margin-bottom: 24px;
+			}
+
+			.filter-row {
+				display: flex;
+				gap: 16px;
+				flex-wrap: wrap;
+			}
+
+			.form-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+				gap: 16px;
+				margin-bottom: 20px;
+			}
+
+			.full-width {
+				grid-column: 1 / -1;
+			}
+			.hidden {
+				display: none !important;
+			}
+
+			label {
+				display: flex;
+				flex-direction: column;
+				font-size: 13px;
+				font-weight: 700;
+				color: var(--iteen-dark);
+				gap: 6px;
+			}
+
+			input[type="text"],
+			input[type="date"],
+			input[type="time"],
+			select {
+				height: 44px;
+				padding: 0 14px;
+				font-size: 14px;
+				border: 2px solid #cbd5e1;
+				border-radius: var(--radius-sm);
+				background: #f8fafc;
+				color: var(--text-main);
+				outline: none;
+				transition: var(--transition);
+			}
+
+			input:focus,
+			select:focus {
+				border-color: var(--iteen-sky);
+				background: #fff;
+				box-shadow: 0 0 0 4px rgba(43, 186, 214, 0.15);
+			}
+
+			.cards-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+				gap: 16px;
+				min-height: 100px;
+			}
+
+			.item-card {
+				background: #fff;
+				border: 1px solid #e2e8f0;
+				border-radius: var(--radius-lg);
+				padding: 20px;
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+				position: relative;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.01);
+				transition: var(--transition);
+				animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			}
+
+			.item-card:hover {
+				transform: translateY(-4px);
+				box-shadow: 0 12px 20px rgba(15, 76, 129, 0.08);
+			}
+
+			.card-accent-line {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				height: 4px;
+				border-top-left-radius: var(--radius-lg);
+				border-top-right-radius: var(--radius-lg);
+				background: var(--iteen-sky);
+			}
+			.type-schedule .card-accent-line {
+				background: var(--iteen-orange);
+			}
+
+			.card-title {
+				font-size: 16px;
+				font-weight: 700;
+				color: var(--iteen-dark);
+				margin-top: 4px;
+			}
+			.card-time {
+				font-size: 13px;
+				font-weight: 700;
+				background: #e0f7fa;
+				color: #006064;
+				padding: 4px 10px;
+				border-radius: 20px;
+				width: fit-content;
+			}
+			.type-schedule .card-time {
+				background: #fff3e0;
+				color: #e65100;
+			}
+			.card-details {
+				font-size: 13px;
+				line-height: 1.5;
+				color: #475569;
+			}
+			.card-details strong {
+				color: var(--iteen-dark);
+			}
+
+			button {
+				font-family: inherit;
+				cursor: pointer;
+			}
+			.form-actions {
+				display: flex;
+				justify-content: flex-end;
+			}
+
+			#submit {
+				height: 48px;
+				padding: 0 32px;
+				background: linear-gradient(
+					135deg,
+					var(--iteen-orange) 0%,
+					#ffb74d 100%
+				);
+				color: #fff;
+				font-weight: 700;
+				font-size: 15px;
+				border: none;
+				border-radius: var(--radius-sm);
+				box-shadow: 0 4px 14px rgba(255, 152, 0, 0.3);
+				transition: var(--transition);
+			}
+
+			#submit:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+			}
+
+			.btn-delete {
+				margin-top: auto;
+				height: 32px;
+				background: #fdf2f2;
+				color: #ef4444;
+				border: 1px solid #fde2e2;
+				border-radius: 6px;
+				font-size: 12px;
+				font-weight: 600;
+				transition: var(--transition);
+			}
+			.btn-delete:hover {
+				background: #ef4444;
+				color: #fff;
+			}
+
+			#message {
+				min-height: 20px;
+				font-size: 14px;
+				font-weight: 700;
+				color: #ef4444;
+				text-align: center;
+				margin-top: 12px;
+			}
+			.shake {
+				animation: shakeAnim 0.3s ease-in-out;
+			}
+
+			.empty-state {
+				grid-column: 1 / -1;
+				text-align: center;
+				padding: 44px 20px;
+				color: #94a3b8;
+				font-style: italic;
+				font-size: 14px;
+			}
+
+			.status-footer {
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				background: #fff;
+				border-top: 1px solid #e2e8f0;
+				padding: 10px 0;
+				z-index: 100;
+			}
+			.status-container {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				font-size: 12px;
+				font-weight: 700;
+				color: #64748b;
+				max-width: 960px;
+				margin: 0 auto;
+				padding: 0 20px;
+			}
+			.status-dot {
+				width: 8px;
+				height: 8px;
+				background: #ef4444;
+				border-radius: 50%;
+			}
+			.connected .status-dot {
+				background: #10b981;
+				box-shadow: 0 0 8px #10b981;
+			}
+
+			@keyframes slideIn {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+			@keyframes shakeAnim {
+				0%,
+				100% {
+					transform: translateX(0);
+				}
+				25% {
+					transform: translateX(-6px);
+				}
+				75% {
+					transform: translateX(6px);
+				}
+			}
+
+			@media (max-width: 768px) {
+				.header-block {
+					flex-direction: column;
+					align-items: stretch;
+					text-align: center;
+				}
+				.view-toggle {
+					justify-content: center;
+				}
+				.form-grid {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="app-wrapper">
+			<div class="header-block">
+				<div class="logo-group">
+					<h1>iTeen <span>Academy</span></h1>
+					<p class="subtitle">Гомель | Расписание и Бронирование по схеме БД</p>
+				</div>
+
+				<div class="view-toggle">
+					<button id="toggle-bookings" class="btn-toggle active">
+						Разовые брони
+					</button>
+					<button id="toggle-schedule" class="btn-toggle">
+						Недельное расписание
+					</button>
+				</div>
+			</div>
+
+			<div class="filter-card">
+				<div class="filter-row">
+					<label id="date-filter-label"
+						>Дата просмотра
+						<input type="date" id="date" />
+					</label>
+					<label
+						>Площадка (Sites)
+						<select id="filter-site">
+							<option value="">Все площадки</option>
+						</select>
+					</label>
+				</div>
+			</div>
+
+			<div class="matrix-section">
+				<h2 id="matrix-title">Текущие бронирования на день</h2>
+				<div id="matrix-container" class="cards-grid"></div>
+			</div>
+
+			<div class="form-card">
+				<h2 id="form-title">Новая разовая бронь ⚡</h2>
+
+				<div class="form-grid">
+					<label
+						>Площадка
+						<select id="form-site"></select>
+					</label>
+
+					<label
+						>Кабинет (Rooms)
+						<select id="form-room" disabled>
+							<option value="">Сначала выберите площадку</option>
+						</select>
+					</label>
+
+					<div id="dynamic-time-context" class="form-field-wrapper">
+						<label id="dynamic-label"
+							>Дата
+							<input type="date" id="form-date" />
+						</label>
+					</div>
+
+					<label
+						>Начало
+						<input type="time" id="start" value="10:00" />
+					</label>
+
+					<label
+						>Конец
+						<input type="time" id="end" value="11:30" />
+					</label>
+
+					<label id="field-manager-box"
+						>Менеджер (Managers)
+						<select id="form-manager"></select>
+					</label>
+
+					<label id="field-teacher-box" class="hidden"
+						>Педагог (Teachers)
+						<select id="form-teacher"></select>
+					</label>
+
+					<label id="field-text-box" class="full-width"
+						>Цель бронирования (Purpose)
+						<input
+							type="text"
+							id="form-text"
+							placeholder="Например: Экспресс-курс по робототехнике"
+						/>
+					</label>
+				</div>
+
+				<div class="form-actions">
+					<button id="submit">Внести в базу данных</button>
+				</div>
+				<div id="message"></div>
+			</div>
+		</div>
+
+		<div class="status-footer">
+			<div class="status-container" id="status-indicator">
+				<span class="status-dot"></span>
+				<span>Соединение с базой данных...</span>
+			</div>
+		</div>
+		<script>
+			const API_BASE = "http://localhost:3000";
+			let currentMode = "bookings";
+
+			let dbData = {
+				sites: [],
+				rooms: [],
+				teachers: [],
+				managers: [],
+			};
+
+			const dateFilterEl = document.getElementById("date");
+			const siteFilterEl = document.getElementById("filter-site");
+			const matrixContainerEl = document.getElementById("matrix-container");
+			const matrixTitleEl = document.getElementById("matrix-title");
+
+			const formSiteEl = document.getElementById("form-site");
+			const formRoomEl = document.getElementById("form-room");
+			const formDateWrapper = document.getElementById("dynamic-time-context");
+			const formTextEl = document.getElementById("form-text");
+			const formTextLabel = formTextEl.parentElement.firstElementChild;
+			const startEl = document.getElementById("start");
+			const endEl = document.getElementById("end");
+			const submitEl = document.getElementById("submit");
+			const messageEl = document.getElementById("message");
+
+			const WEEKDAYS = [
+				"Понедельник",
+				"Вторник",
+				"Среда",
+				"Четверг",
+				"Пятница",
+				"Суббота",
+				"Воскресенье",
+			];
+
+			dateFilterEl.value = new Date().toLocaleDateString("sv-SE");
+
+			function showMessage(text, isError = true) {
+				messageEl.textContent = text;
+				messageEl.style.color = isError ? "#ef4444" : "#10b981";
+				if (text && isError) {
+					const formCard = document.querySelector(".form-card");
+					formCard.classList.remove("shake");
+					void formCard.offsetWidth;
+					formCard.classList.add("shake");
+				}
+			}
+
+			function updateConnectionIndicator(isConnected) {
+				const indicator = document.getElementById("status-indicator");
+				if (isConnected) {
+					indicator.classList.add("connected");
+					indicator.querySelector("span:last-child").textContent =
+						"База данных ITeen подключена стабильно ✨";
+				} else {
+					indicator.classList.remove("connected");
+					indicator.querySelector("span:last-child").textContent =
+						"Нет связи с API бэкенда. Проверьте сервер 🛠️";
+				}
+			}
+
+			async function loadServerReferences() {
+				try {
+					const [sitesRes, roomsRes, teachersRes, managersRes] =
+						await Promise.all([
+							fetch(`${API_BASE}/api/sites`),
+							fetch(`${API_BASE}/api/rooms`),
+							fetch(`${API_BASE}/api/teachers`),
+							fetch(`${API_BASE}/api/managers`),
+						]);
+
+					dbData.sites = await sitesRes.json();
+					dbData.rooms = await roomsRes.json();
+					dbData.teachers = await teachersRes.json();
+					dbData.managers = await managersRes.json();
+
+					populateDropdowns();
+					updateConnectionIndicator(true);
+				} catch (err) {
+					updateConnectionIndicator(false);
+					showMessage(
+						"Критическая ошибка: невозможно связаться с таблицами структуры БД.",
+					);
+				}
+			}
+
+			function populateDropdowns() {
+				siteFilterEl.innerHTML = '<option value="">Все площадки</option>';
+				dbData.sites.forEach(s => {
+					siteFilterEl.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+				});
+
+				formSiteEl.innerHTML = '<option value="">-- Выбери локацию --</option>';
+				dbData.sites.forEach(s => {
+					formSiteEl.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+				});
+
+				const formManager = document.getElementById("form-manager");
+				formManager.innerHTML = "";
+				dbData.managers.forEach(m => {
+					formManager.innerHTML += `<option value="${m.id}">${m.full_name}</option>`;
+				});
+
+				const formTeacher = document.getElementById("form-teacher");
+				formTeacher.innerHTML = "";
+				dbData.teachers.forEach(t => {
+					formTeacher.innerHTML += `<option value="${t.id}">${t.full_name}</option>`;
+				});
+			}
+
+			formSiteEl.addEventListener("change", () => {
+				const siteId = Number(formSiteEl.value);
+				formRoomEl.innerHTML = "";
+
+				if (!siteId) {
+					formRoomEl.disabled = true;
+					formRoomEl.innerHTML =
+						'<option value="">Сначала выберите площадку</option>';
+					return;
+				}
+
+				const subRooms = dbData.rooms.filter(r => r.site_id === siteId);
+				if (subRooms.length === 0) {
+					formRoomEl.innerHTML =
+						'<option value="">В этой локации нет комнат</option>';
+					formRoomEl.disabled = true;
+					return;
+				}
+
+				subRooms.forEach(r => {
+					formRoomEl.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+				});
+				formRoomEl.disabled = false;
+			});
+
+			document
+				.getElementById("toggle-bookings")
+				.addEventListener("click", e => switchMode("bookings", e.target));
+			document
+				.getElementById("toggle-schedule")
+				.addEventListener("click", e => switchMode("schedule", e.target));
+
+			function switchMode(mode, targetBtn) {
+				currentMode = mode;
+				document
+					.querySelectorAll(".btn-toggle")
+					.forEach(b => b.classList.remove("active"));
+				targetBtn.classList.add("active");
+
+				const dateFilterLabel = document.getElementById("date-filter-label");
+
+				if (mode === "bookings") {
+					matrixTitleEl.textContent = "Текущие бронирования на день";
+					dateFilterLabel.classList.remove("hidden");
+					document.getElementById("form-title").textContent =
+						"Новая разовая бронь ⚡";
+					formTextLabel.textContent = "Цель бронирования (Purpose)";
+					formTextEl.placeholder = "Например: Экспресс-курс по робототехнике";
+
+					document
+						.getElementById("field-manager-box")
+						.classList.remove("hidden");
+					document.getElementById("field-teacher-box").classList.add("hidden");
+
+					formDateWrapper.innerHTML = `<label>Дата <input type="date" id="form-date" /></label>`;
+					document.getElementById("form-date").value =
+						new Date().toLocaleDateString("sv-SE");
+				} else {
+					matrixTitleEl.textContent = "Постоянное недельное расписание групп";
+					dateFilterLabel.classList.add("hidden");
+					document.getElementById("form-title").textContent =
+						"Добавить слот в недельное расписание 🎓";
+					formTextLabel.textContent = "Название учебного курса (Title)";
+					formTextEl.placeholder =
+						"Например: Программирование и Game Dev 5-6 класс";
+
+					document.getElementById("field-manager-box").classList.add("hidden");
+					document
+						.getElementById("field-teacher-box")
+						.classList.remove("hidden");
+
+					let options = WEEKDAYS.map(
+						(day, idx) => `<option value="${idx + 1}">${day}</option>`,
+					).join("");
+					formDateWrapper.innerHTML = `<label>День недели <select id="form-weekday">${options}</select></label>`;
+				}
+				loadMainDataMatrix();
+			}
+			async function loadMainDataMatrix() {
+				try {
+					let url =
+						currentMode === "bookings"
+							? `${API_BASE}/api/bookings?date=${dateFilterEl.value}`
+							: `${API_BASE}/api/schedule`;
+
+					const res = await fetch(url);
+					if (!res.ok) throw new Error();
+					const data = await res.json();
+
+					renderMatrixCards(data);
+					updateConnectionIndicator(true);
+				} catch (err) {
+					updateConnectionIndicator(false);
+				}
+			}
+
+			function renderMatrixCards(items) {
+				matrixContainerEl.innerHTML = "";
+				const filterSiteId = Number(siteFilterEl.value);
+
+				let filteredItems = items.filter(item => {
+					const roomObj = dbData.rooms.find(r => r.id === item.room_id);
+					if (!roomObj) return false;
+					return !filterSiteId || roomObj.site_id === filterSiteId;
+				});
+
+				if (filteredItems.length === 0) {
+					matrixContainerEl.innerHTML = `<div class="empty-state">Записей по выбранным критериям не обнаружено.</div>`;
+					return;
+				}
+
+				filteredItems.forEach(item => {
+					const card = document.createElement("div");
+					card.className = `item-card type-${currentMode}`;
+
+					const roomObj = dbData.rooms.find(r => r.id === item.room_id);
+					const siteObj = roomObj
+						? dbData.sites.find(s => s.id === roomObj.site_id)
+						: null;
+					const roomName = roomObj
+						? `${roomObj.name} (${siteObj ? siteObj.name : ""})`
+						: `Кабинет #${item.room_id}`;
+
+					let specificDetails = "";
+					if (currentMode === "bookings") {
+						const managerObj = dbData.managers.find(
+							m => m.id === item.manager_id,
+						);
+						specificDetails = `
+						<div><strong>Цель:</strong> ${escapeHtml(item.purpose || "")}</div>
+						<div><strong>Оформил(а):</strong> ${managerObj ? managerObj.full_name : `Менеджер #${item.manager_id}`}</div>
+						<div><strong>Дата:</strong> ${item.date}</div>
+					`;
+					} else {
+						const teacherObj = dbData.teachers.find(
+							t => t.id === item.teacher_id,
+						);
+						const weekdayName = WEEKDAYS[item.weekday - 1] || "Неизвестно";
+						specificDetails = `
+						<div><strong>Курс:</strong> ${escapeHtml(item.title || "")}</div>
+						<div><strong>Педагог:</strong> ${teacherObj ? teacherObj.full_name : `Преподаватель #${item.teacher_id}`}</div>
+						<div><strong>День:</strong> ${weekdayName}</div>
+					`;
+					}
+
+					card.innerHTML = `
+					<div class="card-accent-line"></div>
+					<div class="card-title">${roomName}</div>
+					<div class="card-time">⏱️ ${item.start_time} – ${item.end_time}</div>
+					<div class="card-details">${specificDetails}</div>
+					<button class="btn-delete" onclick="deleteEntry(${item.id})">Удалить запись</button>
+				`;
+					matrixContainerEl.appendChild(card);
+				});
+			}
+
+			function escapeHtml(text) {
+				const map = {
+					"&": "&amp;",
+					"<": "&lt;",
+					">": "&gt;",
+					'"': "&quot;",
+					"'": "&#039;",
+				};
+				return text ? text.replace(/[&<>"']/g, m => map[m]) : "";
+			}
+
+			async function sendFormData() {
+				const roomId = Number(formRoomEl.value);
+				if (!roomId) {
+					showMessage("Пожалуйста, выберите площадку и кабинет.");
+					return;
+				}
+
+				let body = {
+					room_id: roomId,
+					start_time: startEl.value,
+					end_time: endEl.value,
+				};
+
+				if (currentMode === "bookings") {
+					body.date = document.getElementById("form-date").value;
+					body.manager_id = Number(
+						document.getElementById("form-manager").value,
+					);
+					body.purpose = formTextEl.value.trim();
+					if (!body.purpose)
+						return showMessage("Заполните цель бронирования кабинета.");
+				} else {
+					body.weekday = Number(document.getElementById("form-weekday").value);
+					body.teacher_id = Number(
+						document.getElementById("form-teacher").value,
+					);
+					body.title = formTextEl.value.trim();
+					if (!body.title)
+						return showMessage("Укажите название учебного курса.");
+				}
+
+				try {
+					const targetUrl = `${API_BASE}/api/${currentMode}`;
+					const res = await fetch(targetUrl, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(body),
+					});
+
+					const data = await res.json();
+					if (res.ok) {
+						showMessage(
+							"Данные успешно сохранены в расписание академии!",
+							false,
+						);
+						formTextEl.value = "";
+						await loadMainDataMatrix();
+					} else {
+						showMessage(
+							data.error || "Ошибка контроля пересечений таймслотов.",
+						);
+					}
+				} catch (err) {
+					showMessage("Сбой отправки данных. Бэкенд-сервер отклонил запрос.");
+				}
+			}
+
+			window.deleteEntry = async function (id) {
+				try {
+					const targetUrl = `${API_BASE}/api/${currentMode}/${id}`;
+					const res = await fetch(targetUrl, { method: "DELETE" });
+					if (res.ok) {
+						showMessage("Запись успешно удалена из структуры БД.", false);
+						await loadMainDataMatrix();
+					} else {
+						showMessage("Не удалось удалить выбранную запись.");
+					}
+				} catch (err) {
+					showMessage("Сетевой сбой при попытке удаления записи.");
+				}
+			};
+
+			submitEl.addEventListener("click", sendFormData);
+			dateFilterEl.addEventListener("change", loadMainDataMatrix);
+			siteFilterEl.addEventListener("change", loadMainDataMatrix);
+
+			async function initSystem() {
+				await loadServerReferences();
+				switchMode("bookings", document.getElementById("toggle-bookings"));
+			}
+
+			initSystem();
+			setInterval(loadMainDataMatrix, 3000);
+		</script>
+	</body>
+</html>
