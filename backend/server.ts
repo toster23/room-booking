@@ -1,22 +1,87 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+
+export interface AuthUser {
+  id: number;
+  full_name: string;
+  login: string;
+  role: "manager" | "teacher";
+}
+
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, storedHash: string): boolean {
+  const [salt, key] = storedHash.split(":");
+  const keyBuffer = Buffer.from(key, "hex");
+  const derivedKey = scryptSync(password, salt, 64);
+  return timingSafeEqual(keyBuffer, derivedKey);
+}
+
+export function createToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+export function getAuthUser(db: DatabaseSync, req: IncomingMessage): AuthUser | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7);
+
+  const row = db.prepare(`
+    SELECT users.id, users.full_name, users.login, users.role, sessions.expires_at
+    FROM sessions
+    JOIN users ON users.id = sessions.user_id
+    WHERE sessions.token = ?
+  `).get(token) as (AuthUser & { expires_at: number }) | undefined;
+
+  if (!row) return null;
+  if (Date.now() > row.expires_at) {
+    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+    return null;
+  }
+
+  return { id: row.id, full_name: row.full_name, login: row.login, role: row.role };
+}
 
 const db = new DatabaseSync("booking.db");
 
+// Создание таблиц без удаления существующих данных
 db.exec(`
   CREATE TABLE IF NOT EXISTS sites (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL REFERENCES sites(id), name TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS teachers (id INTEGER PRIMARY KEY, full_name TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS managers (id INTEGER PRIMARY KEY, full_name TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    login TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('manager', 'teacher'))
+  );
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS schedule_slots (
-    id INTEGER PRIMARY KEY, room_id INTEGER NOT NULL REFERENCES rooms(id),
-    teacher_id INTEGER NOT NULL REFERENCES teachers(id), weekday INTEGER NOT NULL,
-    start_time TEXT NOT NULL, end_time TEXT NOT NULL, title TEXT NOT NULL
+    id INTEGER PRIMARY KEY,
+    room_id INTEGER NOT NULL REFERENCES rooms(id),
+    teacher_id INTEGER NOT NULL REFERENCES users(id),
+    weekday INTEGER NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    title TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY, room_id INTEGER NOT NULL REFERENCES rooms(id),
-    manager_id INTEGER NOT NULL REFERENCES managers(id), date TEXT NOT NULL,
-    start_time TEXT NOT NULL, end_time TEXT NOT NULL, purpose TEXT NOT NULL
+    id INTEGER PRIMARY KEY,
+    room_id INTEGER NOT NULL REFERENCES rooms(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    purpose TEXT NOT NULL
   );
 `);
 
@@ -24,9 +89,9 @@ function add(sql: string, ...params: (string | number)[]): number {
   return Number(db.prepare(sql).run(...params).lastInsertRowid);
 }
 
-// Первичное наполнение БД (только если база пустая)
-const siteCount = (db.prepare("SELECT COUNT(*) as c FROM sites").get() as { c: number }).c;
-if (siteCount === 0) {
+// Наполнение только при первом запуске (когда база пустая)
+const sitesCount = db.prepare("SELECT COUNT(*) as count FROM sites").get() as { count: number };
+if (sitesCount.count === 0) {
   const ledovy = add("INSERT INTO sites (name) VALUES (?)", "Филиал «Ледовый»");
   const rechitsky = add("INSERT INTO sites (name) VALUES (?)", "Филиал «Речицкий»");
   const aerodrom = add("INSERT INTO sites (name) VALUES (?)", "Филиал «Старый Аэродром»");
@@ -40,23 +105,27 @@ if (siteCount === 0) {
     add("INSERT INTO rooms (site_id, name) VALUES (?, ?)", siteId, name);
   }
 
-  add("INSERT INTO managers (full_name) VALUES (?)", "Кристина");
-  add("INSERT INTO managers (full_name) VALUES (?)", "Анастасия");
-  add("INSERT INTO managers (full_name) VALUES (?)", "Виктория");
+  // Менеджеры (пароль по умолчанию: 123456)
+  const defaultPass = hashPassword("123456");
+  add("INSERT INTO users (full_name, login, password_hash, role) VALUES (?, ?, ?, ?)", "Кристина", "kristina", defaultPass, "manager");
+  add("INSERT INTO users (full_name, login, password_hash, role) VALUES (?, ?, ?, ?)", "Анастасия", "anastasia", defaultPass, "manager");
+  add("INSERT INTO users (full_name, login, password_hash, role) VALUES (?, ?, ?, ?)", "Виктория", "viktoria", defaultPass, "manager");
 
-  // Обезличенный список преподавателей строго в формате Имя.Б (Закон РБ № 99-З)
-  const teachersList = [
-    "Михаил.А", "Наталья.В", "Андрей.Д", "Артем.Д",
-    "Денис.Л", "Ирина.О", "Людмила.Р", "Полина.С",
-    "Владимир.Ч", "Светлана.Ч", "Дарья.Я", "Антон.С",
-    "Евгений.П", "Светлана.М"
+  // Преподаватели в формате Имя.Б (пароль по умолчанию: 123456)
+  const teachers: [string, string][] = [
+    ["Михаил.А", "mikhail"], ["Наталья.В", "natalia"], ["Андрей.Д", "andrey"],
+    ["Артем.Д", "artem"], ["Денис.Л", "denis"], ["Ирина.О", "irina"],
+    ["Людмила.Р", "lyudmila"], ["Полина.С", "polina"], ["Владимир.Ч", "vladimir"],
+    ["Светлана.Ч", "svetlana_ch"], ["Дарья.Я", "daria"], ["Антон.С", "anton"],
+    ["Евгений.П", "evgeniy"], ["Светлана.М", "svetlana_m"]
   ];
-  for (const t of teachersList) {
-    add("INSERT INTO teachers (full_name) VALUES (?)", t);
+  const teacherIds: number[] = [];
+  for (const [fullName, login] of teachers) {
+    teacherIds.push(add("INSERT INTO users (full_name, login, password_hash, role) VALUES (?, ?, ?, ?)", fullName, login, defaultPass, "teacher"));
   }
 
-  add("INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)", 1, 1, 1, "16:00", "17:30", "Python, группа 1 (Михаил.А)");
-  add("INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)", 4, 5, 4, "17:00", "18:30", "Web, группа 2 (Денис.Л)");
+  add("INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)", 1, teacherIds[0], 1, "16:00", "17:30", "Python, группа 1 (Михаил.А)");
+  add("INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)", 4, teacherIds[4], 4, "17:00", "18:30", "Web, группа 2 (Денис.Л)");
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -64,7 +133,7 @@ const TIME_RE = /^(\d|2[0-3]):[0-5]\d$/;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 function send(res: ServerResponse, status: number, data?: unknown): void {
@@ -79,12 +148,11 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf-8"));
 }
 
-// Защита от случайного ввода полного ФИО: Иванов Иван Иванович -> Иван.И
 function sanitizeTitle(text: string): string {
   const clean = text.trim();
   const fioMatch = clean.match(/^([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)$/);
   if (fioMatch) {
-    return `${fioMatch}.${fioMatch}`;
+    return `${fioMatch[1]}.${fioMatch[2][0]}`;
   }
   return clean;
 }
@@ -117,14 +185,43 @@ const server = createServer(async (req, res) => {
 
     if (method === "OPTIONS") return send(res, 204);
 
+    // === АВТОРИЗАЦИЯ И СЕССИИ ===
+    if (method === "POST" && path === "/api/login") {
+      const data: any = await readJson(req).catch(() => null);
+      if (!data?.login || !data?.password) return send(res, 400, { error: "Введите логин и пароль" });
+
+      const user = db.prepare("SELECT * FROM users WHERE login = ?").get(data.login.toLowerCase().trim()) as any;
+      if (!user || !verifyPassword(data.password, user.password_hash)) {
+        return send(res, 401, { error: "Неверный логин или пароль" });
+      }
+
+      const token = createToken();
+      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      add("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)", token, user.id, expiresAt);
+
+      return send(res, 200, {
+        token,
+        user: { id: user.id, fullName: user.full_name, login: user.login, role: user.role },
+      });
+    }
+
+    if (method === "GET" && path === "/api/me") {
+      const user = getAuthUser(db, req);
+      if (!user) return send(res, 401, { error: "Не авторизован" });
+      return send(res, 200, { id: user.id, fullName: user.full_name, login: user.login, role: user.role });
+    }
+
+    if (method === "POST" && path === "/api/logout") {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        db.prepare("DELETE FROM sessions WHERE token = ?").run(authHeader.slice(7));
+      }
+      return send(res, 204);
+    }
+
+    // === СПРАВОЧНИКИ ===
     if (method === "GET" && path === "/api/sites") {
       return send(res, 200, db.prepare("SELECT * FROM sites").all());
-    }
-    if (method === "GET" && path === "/api/managers") {
-      return send(res, 200, db.prepare("SELECT * FROM managers").all());
-    }
-    if (method === "GET" && path === "/api/teachers") {
-      return send(res, 200, db.prepare("SELECT * FROM teachers").all());
     }
 
     // === РАЗОВЫЕ БРОНИ ===
@@ -132,7 +229,7 @@ const server = createServer(async (req, res) => {
       const date = url.searchParams.get("date");
       const siteId = url.searchParams.get("siteId");
       let query = `
-        SELECT bookings.id, bookings.start_time AS start, bookings.end_time AS end,
+        SELECT bookings.id, bookings.user_id AS userId, bookings.start_time AS start, bookings.end_time AS end,
                bookings.purpose AS name, bookings.date, rooms.site_id AS siteId, rooms.name AS roomName
         FROM bookings JOIN rooms ON rooms.id = bookings.room_id WHERE 1=1
       `;
@@ -143,6 +240,9 @@ const server = createServer(async (req, res) => {
     }
 
     if (method === "POST" && path === "/api/bookings") {
+      const authUser = getAuthUser(db, req);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+
       const data: any = await readJson(req).catch(() => null);
       if (!data) return send(res, 400, { error: "Некорректный JSON" });
       const { siteId, date, start, end, name } = data;
@@ -160,14 +260,24 @@ const server = createServer(async (req, res) => {
       if (!freeRoomId) return send(res, 409, { error: `Все аудитории заняты: ${reason}` });
 
       add(
-        "INSERT INTO bookings (room_id, manager_id, date, start_time, end_time, purpose) VALUES (?, 1, ?, ?, ?, ?)",
-        freeRoomId, date, start, end, sanitizeTitle(name)
+        "INSERT INTO bookings (room_id, user_id, date, start_time, end_time, purpose) VALUES (?, ?, ?, ?, ?, ?)",
+        freeRoomId, authUser.id, date, start, end, sanitizeTitle(name)
       );
       return send(res, 201, { success: true });
     }
 
     if (method === "DELETE" && path.startsWith("/api/bookings/")) {
-      db.prepare("DELETE FROM bookings WHERE id = ?").run(Number(path.split("/").pop()));
+      const authUser = getAuthUser(db, req);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+
+      const id = Number(path.split("/").pop());
+      const row = db.prepare("SELECT user_id FROM bookings WHERE id = ?").get(id) as { user_id: number } | undefined;
+      if (!row) return send(res, 404, { error: "Бронь не найдена" });
+      if (authUser.role !== "manager" && row.user_id !== authUser.id) {
+        return send(res, 403, { error: "Вы можете удалять только свои брони" });
+      }
+
+      db.prepare("DELETE FROM bookings WHERE id = ?").run(id);
       return send(res, 204);
     }
 
@@ -185,14 +295,16 @@ const server = createServer(async (req, res) => {
     }
 
     if (method === "POST" && path === "/api/schedule") {
-      const data: any = await readJson(req).catch(() => null);
-      if (!data) return send(res, 400, { error: "Некорректный JSON" });
-      const { siteId, day, start, end, name, role } = data;
-      if (!siteId || day === undefined || !start || !end || !name) return send(res, 422, { error: "Все поля обязательны" });
-
-      if (role === "teacher") {
+      const authUser = getAuthUser(db, req);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+      if (authUser.role !== "manager") {
         return send(res, 403, { error: "Запрещено! Недельное расписание могут редактировать только менеджеры" });
       }
+
+      const data: any = await readJson(req).catch(() => null);
+      if (!data) return send(res, 400, { error: "Некорректный JSON" });
+      const { siteId, day, start, end, name } = data;
+      if (!siteId || day === undefined || !start || !end || !name) return send(res, 422, { error: "Все поля обязательны" });
 
       const rooms = db.prepare("SELECT id FROM rooms WHERE site_id = ?").all(siteId) as { id: number }[];
       let freeRoomId: number | null = null;
@@ -203,13 +315,19 @@ const server = createServer(async (req, res) => {
       if (!freeRoomId) return send(res, 409, { error: "Все аудитории филиала на это время заняты" });
 
       add(
-        "INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, 1, ?, ?, ?, ?)",
-        freeRoomId, day, start, end, sanitizeTitle(name)
+        "INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)",
+        freeRoomId, authUser.id, day, start, end, sanitizeTitle(name)
       );
       return send(res, 201, { success: true });
     }
 
     if (method === "DELETE" && path.startsWith("/api/schedule/")) {
+      const authUser = getAuthUser(db, req);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+      if (authUser.role !== "manager") {
+        return send(res, 403, { error: "Удалять из недельного расписания могут только менеджеры" });
+      }
+
       db.prepare("DELETE FROM schedule_slots WHERE id = ?").run(Number(path.split("/").pop()));
       return send(res, 204);
     }
