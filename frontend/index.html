@@ -3,200 +3,838 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Панель управления расписанием | ITeen Academy</title>
+		<title>Расписание и бронирование | iTeen Academy</title>
 		<style>
-			:root {
-				--iteen-sky: #2bbad6;
-				--iteen-dark: #0f4c81;
-				--iteen-orange: #ff9800;
-				--iteen-orange-hover: #f57c00;
-				--bg-app: #f0f4f7;
-				--card-bg: #ffffff;
-				--text-main: #374151;
-				--radius-lg: 16px;
-				--radius-sm: 10px;
-				--shadow: 0 10px 25px rgba(15, 76, 129, 0.08);
-				--transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-			}
+			@import url("https://fonts.googleapis.com/css2?family=Lobster&family=Roboto:wght@400;500;700;900&family=Roboto+Condensed:wght@700&display=swap&subset=cyrillic");
 
-			* {
-				box-sizing: border-box;
-				margin: 0;
-				padding: 0;
-			}
+/* ========== ITeen Academy palette ========== */
+:root {
+	--sky: #47a9f5;          /* основной фон сайта */
+	--sky-dark: #1f8fe6;
+	--sky-deep: #1b75c9;     /* указатель/тени */
+	--sky-light: #e3f2fe;
+	--purple: #5b3d9e;       /* фиолетовый круг в hero */
+	--navy: #14315c;
+	--yellow: #ffee00;       /* плашка с адресом */
+	--orange: #ffb235;       /* кнопка "Узнать подробности" */
+	--orange-dark: #f59a12;
+	--orange-light: #fff1d6;
+	--green: #7ac943;        /* зелёные буквы логотипа */
+	--bg: #47a9f5;
+	--card: #ffffff;
+	--text: #1e293b;
+	--muted: #5f7390;
+	--border: #d6e6f5;
+	--radius: 24px;
+	--font-body: "Roboto", "Segoe UI", system-ui, sans-serif;
+	--font-script: "Lobster", "Segoe Script", cursive;
+	--font-tag: "Roboto Condensed", "Arial Narrow", sans-serif;
+	--shadow: 0 10px 30px rgba(20, 49, 92, 0.18);
+	--shadow-text: 0 2px 6px rgba(20, 49, 92, 0.35);
+}
 
-			body {
-				font-family: "Segoe UI", Roboto, system-ui, sans-serif;
-				background: linear-gradient(135deg, var(--iteen-sky) 0%, #199eb8 100%);
-				background-attachment: fixed;
-				color: var(--text-main);
-				padding: 40px 20px 80px 20px;
-				display: flex;
-				justify-content: center;
-			}
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
 
-			.app-wrapper {
-				width: 100%;
-				max-width: 960px;
-				background: var(--bg-app);
-				border-radius: 24px;
-				padding: 32px;
-				box-shadow: 0 25px 50px rgba(15, 76, 129, 0.3);
-			}
+html {
+	scroll-behavior: smooth;
+}
 
-			.auth-overlay {
-				position: fixed;
-				top: 0; left: 0; right: 0; bottom: 0;
-				background: rgba(15, 76, 129, 0.85);
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				z-index: 1000;
-				backdrop-filter: blur(4px);
-				transition: var(--transition);
-			}
-			.auth-card {
-				background: #fff;
-				padding: 32px;
-				border-radius: 20px;
-				box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-				width: 100%;
-				max-width: 400px;
-				text-align: center;
-			}
-			.auth-card h2 { margin-bottom: 8px; color: var(--iteen-dark); font-weight: 700; }
-			.auth-card p { font-size: 14px; color: #64748b; margin-bottom: 20px; }
-			.auth-card select, .auth-card button { width: 100%; margin-bottom: 16px; }
+body {
+	font-family: var(--font-body);
+	color: var(--text);
+	min-height: 100vh;
+	padding: 24px 16px 76px;
+	background-color: var(--bg);
+	/* круги как в hero + «пунктирные» орбиты */
+	background-image:
+		radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.22) 0 220px, transparent 221px),
+		radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.12) 0 300px, transparent 301px),
+		radial-gradient(circle at 0% 100%, rgba(91, 61, 158, 0.35) 0 180px, transparent 181px),
+		radial-gradient(rgba(255, 255, 255, 0.18) 1.5px, transparent 1.6px);
+	background-size: auto, auto, auto, 28px 28px;
+	background-attachment: fixed;
+}
 
-			.header-block {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				border-bottom: 2px dashed #cfd8dc;
-				padding-bottom: 24px;
-				margin-bottom: 24px;
-				flex-wrap: wrap;
-				gap: 20px;
-			}
+.container {
+	max-width: 1320px;
+	margin: 0 auto;
+}
 
-			h1 { font-size: 28px; color: var(--iteen-dark); font-weight: 800; }
-			h1 span { color: var(--iteen-orange); }
-			.subtitle { font-size: 13px; color: #546e7a; font-weight: 600; margin-top: 4px; }
-			.user-badge { font-size: 13px; background: var(--iteen-dark); color: #fff; padding: 6px 12px; border-radius: 20px; font-weight: 700; }
-			h2 { font-size: 20px; color: var(--iteen-dark); margin-bottom: 18px; font-weight: 700; }
+/* ========== Auth ========== */
+.auth-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(20, 49, 92, 0.75);
+	backdrop-filter: blur(8px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 16px;
+}
+.auth-card {
+	position: relative;
+	background: #fff;
+	padding: 40px 32px 32px;
+	border-radius: 32px;
+	width: 100%;
+	max-width: 420px;
+	box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.4);
+	border: 4px solid var(--sky);
+	animation: pop-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.auth-card::before {
+	content: "";
+	position: absolute;
+	inset: 10px;
+	border: 2px dashed rgba(71, 169, 245, 0.45);
+	border-radius: 24px;
+	pointer-events: none;
+}
+.auth-card h2 {
+	color: var(--navy);
+	font-size: 28px;
+	font-weight: 900;
+	margin-bottom: 6px;
+}
+.auth-card h2 span {
+	color: var(--orange);
+}
+.auth-card p {
+	color: var(--muted);
+	font-size: 14px;
+	margin-bottom: 22px;
+}
+.auth-card label {
+	margin-bottom: 16px;
+}
+.auth-card h2 {
+	color: var(--sky-dark);
+	letter-spacing: -0.5px;
+}
+.auth-card .btn-primary {
+	margin-top: 4px;
+}
+.auth-error {
+	min-height: 0;
+	margin: -4px 0 12px;
+	padding: 0;
+	font-size: 13px;
+	font-weight: 700;
+	color: #dc2626;
+	border-radius: 12px;
+}
+.auth-error:not(:empty) {
+	padding: 10px 14px;
+	background: #fff1f1;
+	border: 1.5px solid #fecaca;
+	animation: shake 0.4s ease;
+}
+.auth-hint {
+	position: relative;
+	margin-top: 22px;
+	padding: 14px 16px;
+	background: var(--sky-light);
+	border-radius: 16px;
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--muted);
+}
+.auth-hint strong {
+	color: var(--navy);
+}
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	20% { transform: translateX(-6px); }
+	40% { transform: translateX(6px); }
+	60% { transform: translateX(-4px); }
+	80% { transform: translateX(4px); }
+}
 
-			.view-toggle { display: flex; background: #e2e8f0; padding: 4px; border-radius: var(--radius-sm); }
-			.btn-toggle { height: 38px; padding: 0 18px; font-size: 14px; font-weight: 700; background: transparent; color: #64748b; border-radius: 8px; border: none; cursor: pointer; transition: var(--transition); }
-			.btn-toggle.active { background: var(--card-bg); color: var(--iteen-dark); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
+@keyframes pop-in {
+	from { opacity: 0; transform: scale(0.9) translateY(12px); }
+	to   { opacity: 1; transform: none; }
+}
 
-			.filter-card, .form-card, .matrix-section { background: var(--card-bg); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow); margin-bottom: 24px; }
-			.filter-row { display: flex; gap: 16px; flex-wrap: wrap; }
-			.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
-			.full-width { grid-column: 1 / -1; }
-			.hidden { display: none !important; }
+/* ========== Header (белая шапка как на сайте) ========== */
+.header {
+	background: #fff;
+	border-radius: var(--radius);
+	padding: 18px 28px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 16px;
+	box-shadow: var(--shadow);
+	margin-bottom: 20px;
+	border-bottom: 5px solid var(--orange);
+}
+.brand h1 {
+	font-size: 28px;
+	font-weight: 900;
+	color: var(--sky-dark);
+	letter-spacing: -0.5px;
+}
+.brand h1 span {
+	color: var(--green);
+}
+.brand p {
+	font-family: var(--font-script);
+	font-size: 17px;
+	color: var(--sky-dark);
+	font-weight: 400;
+	margin-top: 2px;
+}
 
-			label { display: flex; flex-direction: column; font-size: 13px; font-weight: 700; color: var(--iteen-dark); gap: 6px; }
-			input[type="text"], input[type="date"], input[type="time"], select { height: 44px; padding: 0 14px; font-size: 14px; border: 2px solid #cbd5e1; border-radius: var(--radius-sm); background: #f8fafc; color: var(--text-main); outline: none; transition: var(--transition); }
-			input:focus, select:focus { border-color: var(--iteen-sky); background: #fff; box-shadow: 0 0 0 4px rgba(43, 186, 214, 0.15); }
-			input:disabled, select:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+.header-controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.user-pill {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: #fff;
+	color: var(--sky-dark);
+	padding: 9px 18px;
+	border-radius: 99px;
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	border: 1.5px solid var(--sky);
+	transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+.user-pill:hover {
+	background: var(--sky-light);
+}
+.btn-switch-user {
+	background: transparent;
+	border: none;
+	color: var(--sky-deep);
+	font-size: 12px;
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+	transition: color 0.2s;
+}
+.btn-switch-user:hover {
+	color: var(--orange-dark);
+}
 
-			.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; min-height: 100px; }
-			.item-card { background: #fff; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 12px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.01); transition: var(--transition); animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-			.item-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(15, 76, 129, 0.08); }
-			
-			.card-accent-line { position: absolute; top: 0; left: 0; right: 0; height: 4px; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); background: var(--iteen-sky); }
-			.type-schedule .card-accent-line { background: var(--iteen-orange); }
-			.card-title { font-size: 16px; font-weight: 700; color: var(--iteen-dark); margin-top: 4px; }
-			.card-time { font-size: 13px; font-weight: 700; background: #e0f7fa; color: #006064; padding: 4px 10px; border-radius: 20px; width: fit-content; }
-			.type-schedule .card-time { background: #fff3e0; color: #e65100; }
-			.card-details { font-size: 13px; line-height: 1.5; color: #475569; }
-			.card-details strong { color: var(--iteen-dark); }
+/* ========== Tabs (пункты меню) ========== */
+.tabs {
+	display: flex;
+	gap: 4px;
+	background: var(--sky-light);
+	padding: 5px;
+	border-radius: 99px;
+}
+.tab-btn {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 99px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	color: #4a5b73;
+	background: transparent;
+	cursor: pointer;
+	transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.tab-btn:hover {
+	color: var(--sky-dark);
+	background: rgba(255, 255, 255, 0.7);
+}
+.tab-btn.active {
+	background: var(--orange);
+	color: #fff;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+	box-shadow: 0 4px 0 var(--orange-dark), 0 8px 14px rgba(245, 154, 18, 0.35);
+	transform: translateY(-1px);
+}
 
-			button { font-family: inherit; cursor: pointer; }
-			.form-actions { display: flex; justify-content: flex-end; }
-			
-			.btn-action { height: 48px; padding: 0 32px; background: linear-gradient(135deg, var(--iteen-orange) 0%, #ffb74d 100% ); color: #fff; font-weight: 700; font-size: 15px; border: none; border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(255, 152, 0, 0.3); transition: var(--transition); }
-			.btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4); }
-			
-			.btn-delete { margin-top: auto; height: 32px; background: #fdf2f2; color: #ef4444; border: 1px solid #fde2e2; border-radius: 6px; font-size: 12px; font-weight: 600; transition: var(--transition); }
-			.btn-delete:hover { background: #ef4444; color: #fff; }
+/* ========== Panels ========== */
+.panel {
+	position: relative;
+	background: var(--card);
+	border-radius: var(--radius);
+	padding: 24px 28px;
+	box-shadow: var(--shadow);
+	margin-bottom: 20px;
+	overflow: hidden;
+}
+.panel::after {
+	/* пунктирная «орбита» в углу */
+	content: "";
+	position: absolute;
+	top: -70px;
+	right: -70px;
+	width: 180px;
+	height: 180px;
+	border: 2px dashed rgba(71, 169, 245, 0.35);
+	border-radius: 50%;
+	pointer-events: none;
+}
+.panel-title {
+	font-family: var(--font-script);
+	font-size: 26px;
+	font-weight: 400;
+	color: var(--sky-dark);
+	margin-bottom: 16px;
+}
 
-			#message { min-height: 20px; font-size: 14px; font-weight: 700; color: #ef4444; text-align: center; margin-top: 12px; }
-			.shake { animation: shakeAnim 0.3s ease-in-out; }
-			.empty-state { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: #94a3b8; font-style: italic; font-size: 14px; }
+/* ========== Forms ========== */
+.form-row {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+	gap: 14px;
+	align-items: end;
+}
+.span-2 {
+	grid-column: span 2;
+}
+@media (max-width: 640px) {
+	.span-2 {
+		grid-column: span 1;
+	}
+}
 
-			.status-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; padding: 10px 0; z-index: 100; }
-			.status-container { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #64748b; max-width: 960px; margin: 0 auto; padding: 0 20px; }
-			.status-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; }
-			.connected .status-dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
+label {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--navy);
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+input,
+select {
+	height: 46px;
+	padding: 0 16px;
+	border: 2px solid var(--border);
+	border-radius: 14px;
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--text);
+	background: #f5faff;
+	outline: none;
+	transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+input:hover,
+select:hover {
+	border-color: #9fcdf5;
+}
+input:focus,
+select:focus {
+	border-color: var(--sky);
+	background: #fff;
+	box-shadow: 0 0 0 4px rgba(71, 169, 245, 0.22);
+}
+input:disabled,
+select:disabled {
+	background: #e8eef5;
+	color: #475569;
+	font-weight: 600;
+}
 
-			@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-			@keyframes shakeAnim { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+/* ========== Buttons ========== */
+.btn-primary {
+	height: 46px;
+	padding: 0 28px;
+	background: var(--orange);
+	color: #fff;
+	border: none;
+	border-radius: 99px;
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 900;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+	cursor: pointer;
+	box-shadow: 0 4px 0 var(--orange-dark), 0 10px 18px rgba(245, 154, 18, 0.35);
+	transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.btn-primary:hover {
+	background: #ffbd4d;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 0 var(--orange-dark), 0 14px 22px rgba(245, 154, 18, 0.4);
+}
+.btn-primary:active {
+	transform: translateY(2px);
+	box-shadow: 0 1px 0 var(--orange-dark);
+}
 
-			@media (max-width: 768px) {
-				.header-block { flex-direction: column; align-items: stretch; text-align: center; }
-				.view-toggle { justify-content: center; }
-				.form-grid { grid-template-columns: 1fr; }
-			}
+#message {
+	margin-top: 12px;
+	font-size: 13px;
+	font-weight: 700;
+	min-height: 18px;
+}
+
+/* ========== Calendar toolbar ========== */
+.calendar-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin-bottom: 18px;
+}
+.week-nav {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.btn-nav {
+	height: 40px;
+	padding: 0 18px;
+	background: #fff;
+	border: 1.5px solid var(--sky);
+	border-radius: 99px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	color: var(--sky-dark);
+	cursor: pointer;
+	transition: background 0.18s, color 0.18s, transform 0.18s;
+}
+.btn-nav:hover {
+	background: var(--sky);
+	color: #fff;
+	transform: translateY(-1px);
+}
+.week-label {
+	font-family: var(--font-script);
+	font-size: 22px;
+	font-weight: 400;
+	color: var(--navy);
+	min-width: 195px;
+	text-align: center;
+}
+
+.legend {
+	display: flex;
+	gap: 16px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--muted);
+}
+.legend span {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.dot-regular,
+.dot-booking {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+.dot-regular { background: var(--orange); }
+.dot-booking { background: var(--sky); }
+
+/* ========== Week grid ========== */
+.week-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(160px, 1fr));
+	gap: 12px;
+	overflow-x: auto;
+	padding: 4px 4px 12px;
+	scroll-snap-type: x proximity;
+	scrollbar-width: thin;
+	scrollbar-color: var(--sky) var(--sky-light);
+}
+.week-grid::-webkit-scrollbar { height: 8px; }
+.week-grid::-webkit-scrollbar-track { background: var(--sky-light); border-radius: 99px; }
+.week-grid::-webkit-scrollbar-thumb { background: var(--sky); border-radius: 99px; }
+
+.day-col {
+	background: #f5faff;
+	border: 2px solid var(--border);
+	border-radius: 20px;
+	min-height: 360px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	scroll-snap-align: start;
+	transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.day-col:hover {
+	transform: translateY(-3px);
+	border-color: var(--sky);
+	box-shadow: 0 12px 24px rgba(31, 143, 230, 0.18);
+}
+.day-col.today {
+	border-color: var(--yellow);
+	background: #fffde0;
+	box-shadow: 0 0 0 3px rgba(255, 238, 0, 0.55);
+}
+.day-header {
+	padding: 12px 8px;
+	text-align: center;
+	background: var(--sky);
+	color: #fff;
+}
+.day-col.today .day-header {
+	background: var(--yellow);
+}
+.day-name {
+	font-family: var(--font-tag);
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: #fff;
+	text-shadow: var(--shadow-text);
+}
+.day-date {
+	font-size: 11px;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.9);
+	margin-top: 2px;
+}
+.day-col.today .day-name {
+	color: var(--navy);
+	text-shadow: none;
+}
+.day-col.today .day-date {
+	color: var(--navy);
+}
+
+.day-body {
+	padding: 10px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	flex: 1;
+}
+
+/* ========== Slot cards ========== */
+.slot-card {
+	background: #fff;
+	border-radius: 16px;
+	padding: 12px;
+	border: 1.5px solid var(--border);
+	border-left: 6px solid var(--orange);
+	box-shadow: 0 3px 10px rgba(20, 49, 92, 0.06);
+	font-size: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	transition: transform 0.18s, box-shadow 0.18s;
+}
+.slot-card:hover {
+	transform: translateY(-2px) rotate(-0.4deg);
+	box-shadow: 0 10px 20px rgba(20, 49, 92, 0.14);
+}
+.slot-card.is-booking {
+	border-left-color: var(--sky);
+}
+.slot-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 4px;
+}
+.slot-time {
+	font-family: var(--font-tag);
+	font-weight: 700;
+	color: var(--navy);
+	font-size: 14px;
+	letter-spacing: 0.3px;
+}
+
+.badge {
+	font-size: 10px;
+	font-weight: 900;
+	padding: 3px 9px;
+	border-radius: 99px;
+}
+.badge-regular {
+	background: var(--orange-light);
+	color: #b45309;
+}
+.badge-booking {
+	background: var(--sky-light);
+	color: #0b6bb8;
+}
+
+.slot-title {
+	font-weight: 700;
+	color: var(--text);
+	line-height: 1.35;
+	word-break: break-word;
+}
+.slot-meta {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--muted);
+}
+
+.btn-del {
+	margin-top: 4px;
+	padding: 6px;
+	background: #fff1f1;
+	color: #dc2626;
+	border: 1.5px solid #fecaca;
+	border-radius: 99px;
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.btn-del:hover {
+	background: #dc2626;
+	color: #fff;
+	transform: scale(1.03);
+}
+
+.empty-day {
+	text-align: center;
+	color: #8aa3bf;
+	font-family: var(--font-script);
+	font-size: 16px;
+	margin-top: 32px;
+}
+.hidden {
+	display: none !important;
+}
+
+/* ========== Footer ========== */
+.footer {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: #fff;
+	border-top: 4px solid var(--orange);
+	padding: 10px 20px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--muted);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	z-index: 50;
+}
+.dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: #ef4444;
+}
+.connected .dot {
+	background: #10b981;
+	box-shadow: 0 0 8px #10b981;
+}
+
+/* ========== Focus & a11y ========== */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+	outline: 3px solid var(--yellow);
+	outline-offset: 2px;
+}
+
+/* ========== Адаптация ========== */
+@media (max-width: 1024px) {
+	.header { padding: 16px 20px; }
+	.panel { padding: 20px; }
+}
+
+@media (max-width: 768px) {
+	body { padding: 14px 10px 72px; }
+	.header {
+		flex-direction: column;
+		align-items: stretch;
+		text-align: center;
+	}
+	.header-controls {
+		justify-content: center;
+	}
+	.tabs {
+		width: 100%;
+		justify-content: center;
+	}
+	.tab-btn {
+		flex: 1;
+		padding: 10px 8px;
+		font-size: 12px;
+	}
+	.calendar-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.week-nav {
+		justify-content: space-between;
+	}
+	.week-label {
+		min-width: 0;
+		flex: 1;
+		font-size: 19px;
+	}
+	.legend {
+		justify-content: center;
+	}
+	.week-grid {
+		grid-template-columns: repeat(7, 78%);
+	}
+	.panel-title { font-size: 23px; }
+	.btn-primary { width: 100%; }
+}
+
+@media (max-width: 420px) {
+	.brand h1 { font-size: 24px; }
+	.auth-card { padding: 34px 22px 26px; }
+}
+
+@media (hover: none) {
+	.day-col:hover,
+	.slot-card:hover,
+	.btn-nav:hover,
+	.btn-primary:hover { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation: none !important;
+		transition: none !important;
+		scroll-behavior: auto !important;
+	}
+}
+
 		</style>
 	</head>
-		<body>
-		<!-- МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ ПРИ ВХОДЕ -->
-		<div id="auth-screen" class="auth-overlay">
-			<div class="auth-card">
-				<h2>Добро пожаловать</h2>
-				<p>Пожалуйста, укажите вашу роль для работы</p>
-				<label>Ваша роль
-					<select id="auth-role">
-						<option value="manager">Менеджер</option>
-						<option value="teacher">Преподаватель</option>
-					</select>
-				</label>
-				<label>Ваше имя
-					<select id="auth-user-name"></select>
-				</label>
-				<button class="btn-action" onclick="login()">Войти в панель</button>
-			</div>
-		</div>
+	<body>
+		  <div id="auth-screen" class="auth-overlay">
+    <form class="auth-card" onsubmit="handleLogin(event)">
+      <h2>iTeen <span>Academy</span></h2>
+      <p>Авторизация сотрудника по логину и паролю</p>
+      <label>Логин
+        <input type="text" id="auth-login" placeholder="Например: kristina или artem" required />
+      </label>
+      <label>Пароль
+        <input type="password" id="auth-password" placeholder="••••••" required />
+      </label>
+      <div class="auth-error" id="auth-error"></div>
+      <button type="submit" class="btn-primary" style="width:100%;">Войти</button>
+      <div class="auth-hint">
+        <strong>Логины:</strong> kristina, anastasia, viktoria (менеджеры); mikhail, artem, denis и др. (преподаватели).<br>
+        <strong>Пароль по умолчанию:</strong> 123456
+      </div>
+    </form>
+  </div>
 
-		<!-- ОСНОВНОЙ КОНТЕЙНЕР ПРИЛОЖЕНИЯ -->
-		<div class="app-wrapper">
-			<div class="header-block">
-				<div class="logo-group">
+  <!-- Окно обязательной смены пароля при первом входе -->
+  <div id="change-pass-screen" class="auth-overlay hidden">
+    <form class="auth-card" onsubmit="handleChangePassword(event)">
+      <h2>Смена <span>пароля</span></h2>
+      <p>Вы вошли впервые. Придумайте новый постоянный пароль (не менее 6 символов).</p>
+      <label>Новый пароль
+        <input type="password" id="new-pass-1" minlength="6" required />
+      </label>
+      <label>Повторите пароль
+        <input type="password" id="new-pass-2" minlength="6" required />
+      </label>
+      <div class="auth-error" id="change-pass-error"></div>
+      <button type="submit" class="btn-primary" style="width:100%;">Сохранить пароль</button>
+    </form>
+  </div>
+
+  <!-- Окно создания нового сотрудника (только для менеджеров) -->
+  <div id="create-user-screen" class="auth-overlay hidden">
+    <form class="auth-card" onsubmit="handleCreateUser(event)">
+      <h2>Новый <span>сотрудник</span></h2>
+      <p>Укажите обезличенное имя (например, Иван.П) и логин для входа.</p>
+      <label>Имя (формат Имя.Б)
+        <input type="text" id="cu-name" placeholder="Иван.П" required />
+      </label>
+      <label>Логин (латиницей)
+        <input type="text" id="cu-login" placeholder="ivan" required />
+      </label>
+      <label>Временный пароль
+        <input type="text" id="cu-pass" value="123456" required />
+      </label>
+      <label>Роль
+        <select id="cu-role">
+          <option value="teacher">Преподаватель</option>
+          <option value="manager">Менеджер</option>
+        </select>
+      </label>
+      <div class="auth-error" id="cu-error"></div>
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Создать</button>
+        <button type="button" class="btn-nav" style="height:42px;" onclick="closeCreateUser()">Отмена</button>
+      </div>
+    </form>
+  </div>
+
+
+		<div class="container">
+			<div class="header">
+				<div class="brand">
 					<h1>iTeen <span>Academy</span></h1>
-					<p class="subtitle">Гомель | Расписание и Бронирование по схеме БД</p>
+					<p>Гомель • Единый календарь расписания и бронирования</p>
 				</div>
-				<div id="active-user-display" class="user-badge">Авторизация...</div>
-
-				<div class="view-toggle">
-					<button id="toggle-bookings" class="btn-toggle active">Разовые брони</button>
-					<button id="toggle-schedule" class="btn-toggle">Недельное расписание</button>
+				<div class="header-controls">
+					<div class="tabs">
+						<button
+							id="tab-booking"
+							class="tab-btn active"
+							onclick="setFormMode('bookings')"
+						>
+							+ Разовая бронь
+						</button>
+						<button
+							id="tab-schedule"
+							class="tab-btn"
+							onclick="setFormMode('schedule')"
+						>
+							+ В недельную сетку
+						</button>
+					</div>
+					        <button id="btn-open-cu" class="btn-secondary hidden" onclick="openCreateUser()">+ Сотрудник</button>
+					<div class="user-pill">
+						<span id="user-badge">Гость</span>
+						<button class="btn-switch-user" onclick="logout()">Сменить</button>
+					</div>
 				</div>
 			</div>
 
-			<div class="filter-card">
-				<div class="filter-row">
-					<label id="date-filter-label">Дата просмотра
-						<input type="date" id="date" />
-					</label>
-					<label>Площадка (Sites)
-						<select id="filter-site">
-							<option value="">Все площадки</option>
-						</select>
-					</label>
+			<div class="panel">
+				<div class="panel-title">
+					<span id="form-title"
+						>Новая разовая бронь (отобразится в календаре)</span
+					>
 				</div>
-			</div>
-
-			<div class="form-card">
-				<h2 id="form-title">Забронировать кабинет</h2>
-				<div class="form-grid">
-					<label>Площадка
+				<div class="form-row">
+					<label
+						>Филиал
 						<select id="form-site"></select>
 					</label>
-					<label id="form-date-label">Дата
+					<label id="wrap-date"
+						>Дата
 						<input type="date" id="form-date" />
 					</label>
-					<label id="form-day-label" class="hidden">День недели
+					<label id="wrap-day" class="hidden"
+						>День недели
 						<select id="form-day">
 							<option value="1">Понедельник</option>
 							<option value="2">Вторник</option>
@@ -204,253 +842,399 @@
 							<option value="4">Четверг</option>
 							<option value="5">Пятница</option>
 							<option value="6">Суббота</option>
-							<option value="0">Воскресенье</option>
+							<option value="7">Воскресенье</option>
 						</select>
 					</label>
-					<label>Начало
+					<label
+						>Начало
 						<input type="time" id="start" value="10:00" />
 					</label>
-					<label>Конец
+					<label
+						>Конец
 						<input type="time" id="end" value="11:30" />
 					</label>
-					<label>Кто добавляет запись
-						<select id="form-creator" disabled></select>
+					<label
+						>Кто добавляет
+						<input type="text" id="form-creator" disabled />
 					</label>
-					<label class="full-width">Описание / Имя группы
-						<input type="text" id="name" placeholder="Программирование Python 1-й год" />
+					<label class="span-2"
+						>Группа / Цель брони
+						<input
+							type="text"
+							id="name"
+							placeholder="Например: Python 1 год или Отработка"
+						/>
 					</label>
-				</div>
-				<div class="form-actions">
-					<button id="submit-btn" class="btn-action">Добавить запись</button>
+					<button id="submit-btn" class="btn-primary">Добавить</button>
 				</div>
 				<div id="message"></div>
 			</div>
 
-			<div class="matrix-section">
-				<h2 id="matrix-title">Текущие брони</h2>
-				<div id="cards-container" class="cards-grid"></div>
-			</div>
-		</div>
+			<div class="panel">
+				<div class="calendar-toolbar">
+					<div class="week-nav">
+						<button class="btn-nav" onclick="changeWeek(-1)">← Пред.</button>
+						<div class="week-label" id="week-label">Неделя</div>
+						<button class="btn-nav" onclick="changeWeek(1)">След. →</button>
+						<button class="btn-nav" onclick="resetWeek()">Сегодня</button>
+					</div>
 
-		<div class="status-footer" id="footer-status">
-			<div class="status-container">
-				<div class="status-dot"></div>
-				<span id="status-text">Подключение к серверу...</span>
-			</div>
-		</div>
-				<script>
-			const API_BASE = "http://171.22.30.57:3000";
-			let currentMode = "bookings"; 
-			let currentUser = { role: "manager", name: "" };
-
-			const managersList = ["Кристина", "Анастасия", "Виктория"];
-			const teachersList = ["Анна П.", "Игорь С."];
-
-			const authRole = document.getElementById("auth-role");
-			const authUserName = document.getElementById("auth-user-name");
-			const activeUserDisplay = document.getElementById("active-user-display");
-			const formCreator = document.getElementById("form-creator");
-
-			const dateFilter = document.getElementById("date");
-			const filterSite = document.getElementById("filter-site");
-			const formSite = document.getElementById("form-site");
-			const formDate = document.getElementById("form-date");
-			const formDay = document.getElementById("form-day");
-			const startInput = document.getElementById("start");
-			const endInput = document.getElementById("end");
-			const nameInput = document.getElementById("name");
-			const submitBtn = document.getElementById("submit-btn");
-			const cardsContainer = document.getElementById("cards-container");
-			const messageEl = document.getElementById("message");
-			const footerStatus = document.getElementById("footer-status");
-			const statusText = document.getElementById("status-text");
-
-			// Установка сегодняшней даты
-			const todayStr = new Date().toLocaleDateString("sv-SE");
-			dateFilter.value = todayStr;
-			formDate.value = todayStr;
-
-			function updateAuthNames() {
-				const list = authRole.value === "manager" ? managersList : teachersList;
-				authUserName.innerHTML = "";
-				list.forEach(name => {
-					const opt = document.createElement("option");
-					opt.value = name; opt.textContent = name;
-					authUserName.appendChild(opt);
-				});
-			}
-			authRole.addEventListener("change", updateAuthNames);
-			updateAuthNames();
-
-			function login() {
-				currentUser.role = authRole.value;
-				currentUser.name = authUserName.value;
-
-				activeUserDisplay.textContent = `${currentUser.role === 'manager' ? '💼' : '🎓'} ${currentUser.name}`;
-				document.getElementById("auth-screen").style.display = "none";
-				formCreator.innerHTML = `<option>${currentUser.name}</option>`;
-
-				if (currentUser.role === "teacher") {
-					document.getElementById("toggle-schedule").click();
-				} else {
-					document.getElementById("toggle-bookings").click();
-				}
-			}
-
-			function showMsg(text, isError = true) {
-				messageEl.textContent = text;
-				messageEl.style.color = isError ? "#ef4444" : "#10b981";
-				if (isError) {
-					messageEl.classList.remove("shake");
-					void messageEl.offsetWidth;
-					messageEl.classList.add("shake");
-				}
-			}
-
-			document.getElementById("toggle-bookings").addEventListener("click", (e) => switchMode("bookings", e.target));
-			document.getElementById("toggle-schedule").addEventListener("click", (e) => switchMode("schedule", e.target));
-
-			function switchMode(mode, targetBtn) {
-				currentMode = mode;
-				document.querySelectorAll(".btn-toggle").forEach(b => b.classList.remove("active"));
-				targetBtn.classList.add("active");
-
-				if (mode === "bookings") {
-					document.getElementById("date-filter-label").classList.remove("hidden");
-					document.getElementById("form-date-label").classList.remove("hidden");
-					document.getElementById("form-day-label").classList.add("hidden");
-					document.getElementById("form-title").textContent = "Забронировать кабинет (Разово)";
-					document.getElementById("matrix-title").textContent = "Текущие разовые брони";
-				} else {
-					document.getElementById("date-filter-label").classList.add("hidden");
-					document.getElementById("form-date-label").classList.add("hidden");
-					document.getElementById("form-day-label").classList.remove("hidden");
-					document.getElementById("form-title").textContent = "Добавить регулярное расписание";
-					document.getElementById("matrix-title").textContent = "Недельная сетка занятий";
-				}
-				loadData();
-			}
-
-			let siteNamesMap = {};
-
-			async function loadSites() {
-				try {
-					const res = await fetch(`${API_BASE}/api/sites`);
-					const sites = await res.json();
-					filterSite.innerHTML = '<option value="">Все площадки</option>';
-					formSite.innerHTML = '';
-					siteNamesMap = {};
-					
-					sites.forEach(s => {
-						siteNamesMap[s.id] = s.name;
-						const opt1 = document.createElement("option"); opt1.value = s.id; opt1.textContent = s.name; filterSite.appendChild(opt1);
-						const opt2 = document.createElement("option"); opt2.value = s.id; opt2.textContent = s.name; formSite.appendChild(opt2);
-					});
-					footerStatus.classList.add("connected");
-					statusText.textContent = "Подключено к бэкенду iTeen";
-				} catch (err) {
-					footerStatus.classList.remove("connected");
-					statusText.textContent = "Сервер недоступен";
-				}
-			}
-
-			async function loadData() {
-				try {
-					let url = `${API_BASE}/api/${currentMode}`;
-					if (currentMode === "bookings") url += `?date=${dateFilter.value}`;
-					if (filterSite.value) url += (url.includes("?") ? "&" : "?") + `siteId=${filterSite.value}`;
-
-					const res = await fetch(url);
-					const items = await res.json();
-					renderCards(items);
-					footerStatus.classList.add("connected");
-					statusText.textContent = "Подключено к бэкенду iTeen";
-				} catch (err) {
-					footerStatus.classList.remove("connected");
-					statusText.textContent = "Сбой синхронизации данных";
-				}
-			}
-
-			const daysMap = { "1": "Понедельник", "2": "Вторник", "3": "Среда", "4": "Четверг", "5": "Пятница", "6": "Суббота", "0": "Воскресенье" };
-
-			function renderCards(items) {
-				cardsContainer.innerHTML = "";
-				if (items.length === 0) {
-					cardsContainer.innerHTML = `<div class="empty-state">Записей не обнаружено. Измените фильтры или добавьте новую!</div>`;
-					return;
-				}
-
-				items.forEach(item => {
-					const card = document.createElement("div");
-					card.className = `item-card type-${currentMode}`;
-					let specificDetail = currentMode === "bookings" ? `<strong>Дата:</strong> ${item.date}` : `<strong>День:</strong> ${daysMap[item.day] || item.day}`;
-					let displaySiteName = siteNamesMap[item.siteId] || `Площадка №${item.siteId}`;
-
-					card.innerHTML = `
-						<div class="card-accent-line"></div>
-						<div class="card-time">${item.start} – ${item.end}</div>
-						<div class="card-title">${item.name}</div>
-						<div class="card-details">
-							<strong>Филиал:</strong> ${displaySiteName}<br>
-							${specificDetail}
+					<div
+						style="
+							display: flex;
+							align-items: center;
+							gap: 16px;
+							flex-wrap: wrap;
+						"
+					>
+						<div class="legend">
+							<span><i class="dot-regular"></i> Недельное расписание</span>
+							<span><i class="dot-booking"></i> Разовая бронь</span>
 						</div>
-						<button class="btn-delete" onclick="deleteItem(${item.id})">Удалить запись</button>
-					`;
-					cardsContainer.appendChild(card);
-				});
-			}
+						<select id="filter-site" style="height: 36px">
+							<option value="">Все филиалы</option>
+						</select>
+					</div>
+				</div>
 
-			submitBtn.addEventListener("click", async () => {
-				showMsg("");
-				const body = {
-	siteId: Number(formSite.value),
-	start: startInput.value,
-	end: endInput.value,
-	// ИСПРАВЛЕНИЕ: Если поле пустое, пишем понятный текст вместо голого имени
-	name: nameInput.value.trim() || `Занятие (${currentUser.name})`
-};
-				if (currentMode === "bookings") {
-					body.date = formDate.value;
-				} else {
-					body.day = Number(formDay.value);
-				}
+				<div class="week-grid" id="week-grid"></div>
+			</div>
+		</div>
 
-				try {
-					const res = await fetch(`${API_BASE}/api/${currentMode}`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(body)
-					});
-					const data = await res.json();
-					if (res.ok) {
-						showMsg("Запись успешно сохранена в систему!", false);
-						nameInput.value = "";
-						loadData();
-					} else {
-						showMsg(data.error || "Ошибка сохранения");
-					}
-				} catch (err) {
-					showMsg("Не удалось связаться с сервером");
-				}
-			});
-
-			window.deleteItem = async function(id) {
-				if (!confirm("Вы действительно хотите удалить эту запись?")) return;
-				try {
-					const res = await fetch(`${API_BASE}/api/${currentMode}/${id}`, { method: "DELETE" });
-					if (res.ok) loadData();
-				} catch (err) { alert("Ошибка отправки сетевого запроса"); }
-			};
-
-			dateFilter.addEventListener("change", loadData);
-			filterSite.addEventListener("change", loadData);
-
-			async function init() {
-				await loadSites();
-				await loadData();
-			}
-			init();
-			setInterval(loadData, 3000);
-		</script>
+		<div class="footer" id="footer">
+			<div class="dot"></div>
+			<span id="status-text">Подключение к серверу...</span>
+		</div>
 	</body>
+</html>
+    <script>
+    const API_BASE = "http://171.22.30.57:3000";
+    let formMode = "bookings";
+    let authToken = localStorage.getItem("iteen_token") || "";
+    let currentUser = null;
+    let sitesMap = {};
+    let weekOffset = 0;
+    let lastRenderedHash = "";
+
+    const formSite = document.getElementById("form-site");
+    const filterSite = document.getElementById("filter-site");
+    const formDate = document.getElementById("form-date");
+    const formDay = document.getElementById("form-day");
+    const startEl = document.getElementById("start");
+    const endEl = document.getElementById("end");
+    const nameEl = document.getElementById("name");
+    const submitBtn = document.getElementById("submit-btn");
+    const msgEl = document.getElementById("message");
+
+    formDate.value = new Date().toLocaleDateString("sv-SE");
+
+    function authHeaders(extra = {}) {
+      return authToken ? { ...extra, Authorization: `Bearer ${authToken}` } : extra;
+    }
+
+    async function checkSession() {
+      if (!authToken) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/me`, { headers: authHeaders() });
+        if (res.ok) {
+          applyUserSession(await res.json());
+        } else {
+          authToken = "";
+          localStorage.removeItem("iteen_token");
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const errEl = document.getElementById("auth-error");
+      errEl.textContent = "";
+
+      const login = document.getElementById("auth-login").value.trim();
+      const password = document.getElementById("auth-password").value;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ login, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.error || "Ошибка входа";
+          return;
+        }
+        authToken = data.token;
+        localStorage.setItem("iteen_token", authToken);
+        applyUserSession(data.user);
+      } catch { errEl.textContent = "Сервер недоступен"; }
+    }
+
+    function applyUserSession(user) {
+      currentUser = user;
+      document.getElementById("user-badge").textContent =
+        `${user.role === "manager" ? "💼" : "🎓"} ${user.fullName}`;
+      document.getElementById("form-creator").value = user.fullName;
+      document.getElementById("auth-screen").classList.add("hidden");
+
+      document.getElementById("change-pass-screen").classList.toggle("hidden", !user.mustChangePassword);
+
+      if (user.role === "teacher") {
+        document.getElementById("tab-schedule").classList.add("hidden");
+        document.getElementById("btn-open-cu").classList.add("hidden");
+        setFormMode("bookings");
+      } else {
+        document.getElementById("tab-schedule").classList.remove("hidden");
+        document.getElementById("btn-open-cu").classList.remove("hidden");
+      }
+      lastRenderedHash = "";
+      loadAllData();
+    }
+
+    async function handleChangePassword(e) {
+      e.preventDefault();
+      const errEl = document.getElementById("change-pass-error");
+      errEl.textContent = "";
+
+      const p1 = document.getElementById("new-pass-1").value;
+      const p2 = document.getElementById("new-pass-2").value;
+      if (p1 !== p2) { errEl.textContent = "Пароли не совпадают"; return; }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/change-password`, {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ newPassword: p1 })
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || "Ошибка смены пароля"; return; }
+        currentUser.mustChangePassword = false;
+        document.getElementById("change-pass-screen").classList.add("hidden");
+        showMessage("Пароль успешно изменён!", true);
+      } catch { errEl.textContent = "Сервер недоступен"; }
+    }
+
+    function openCreateUser() {
+      document.getElementById("cu-error").textContent = "";
+      document.getElementById("create-user-screen").classList.remove("hidden");
+    }
+
+    function closeCreateUser() {
+      document.getElementById("create-user-screen").classList.add("hidden");
+    }
+
+    async function handleCreateUser(e) {
+      e.preventDefault();
+      const errEl = document.getElementById("cu-error");
+      errEl.textContent = "";
+
+      const fullName = document.getElementById("cu-name").value.trim();
+      const login = document.getElementById("cu-login").value.trim();
+      const password = document.getElementById("cu-pass").value.trim();
+      const role = document.getElementById("cu-role").value;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/users`, {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ fullName, login, password, role })
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || "Ошибка создания"; return; }
+        document.getElementById("cu-name").value = "";
+        document.getElementById("cu-login").value = "";
+        closeCreateUser();
+        showMessage(`Сотрудник ${data.fullName} (логин: ${data.login}) создан!`, true);
+      } catch { errEl.textContent = "Сервер недоступен"; }
+    }
+    async function logout() {
+      if (authToken) {
+        await fetch(`${API_BASE}/api/logout`, { method: "POST", headers: authHeaders() }).catch(() => {});
+      }
+      authToken = "";
+      currentUser = null;
+      localStorage.removeItem("iteen_token");
+      document.getElementById("change-pass-screen").classList.add("hidden");
+      document.getElementById("auth-screen").classList.remove("hidden");
+    }
+
+    function setFormMode(mode) {
+      formMode = mode;
+      document.getElementById("tab-booking").classList.toggle("active", mode === "bookings");
+      document.getElementById("tab-schedule").classList.toggle("active", mode === "schedule");
+      document.getElementById("wrap-date").classList.toggle("hidden", mode !== "bookings");
+      document.getElementById("wrap-day").classList.toggle("hidden", mode === "bookings");
+      document.getElementById("form-title").textContent = mode === "bookings"
+        ? "Новая разовая бронь (отобразится в календаре)"
+        : "Добавить регулярное занятие в недельную сетку";
+    }
+
+    function showMessage(text, ok = false) {
+      msgEl.textContent = text;
+      msgEl.style.color = ok ? "#10b981" : "#dc2626";
+    }
+
+    function getWeekDays(offset) {
+      const now = new Date();
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - dayOfWeek + 1 + offset * 7);
+
+      const names = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days.push({
+          weekday: i + 1,
+          name: names[i],
+          iso: d.toLocaleDateString("sv-SE"),
+          shortDate: d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })
+        });
+      }
+      return days;
+    }
+
+    function changeWeek(delta) { weekOffset += delta; lastRenderedHash = ""; loadAllData(); }
+    function resetWeek() { weekOffset = 0; lastRenderedHash = ""; loadAllData(); }
+
+    async function loadSites() {
+      try {
+        const res = await fetch(`${API_BASE}/api/sites`);
+        const sites = await res.json();
+        sitesMap = {};
+        filterSite.innerHTML = `<option value="">Все филиалы</option>`;
+        formSite.innerHTML = "";
+        sites.forEach(s => {
+          sitesMap[s.id] = s.name;
+          filterSite.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+          formSite.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+        setConnected(true);
+      } catch { setConnected(false); }
+    }
+
+    function setConnected(ok) {
+      document.getElementById("footer").classList.toggle("connected", ok);
+      document.getElementById("status-text").textContent = ok ? "Подключено к серверу iTeen" : "Нет связи с сервером";
+    }
+
+    async function loadAllData() {
+      try {
+        const siteQuery = filterSite.value ? `?siteId=${filterSite.value}` : "";
+        const [resSched, resBook] = await Promise.all([
+          fetch(`${API_BASE}/api/schedule${siteQuery}`),
+          fetch(`${API_BASE}/api/bookings${siteQuery}`)
+        ]);
+        const scheduleItems = await resSched.json();
+        const bookingItems = await resBook.json();
+
+        setConnected(true);
+        const currentHash = JSON.stringify({ scheduleItems, bookingItems, weekOffset, userId: currentUser?.id, role: currentUser?.role });
+        if (currentHash === lastRenderedHash) return;
+        lastRenderedHash = currentHash;
+
+        renderWeekCalendar(scheduleItems, bookingItems);
+      } catch { setConnected(false); }
+    }
+    function renderWeekCalendar(scheduleItems, bookingItems) {
+      const days = getWeekDays(weekOffset);
+      const todayIso = new Date().toLocaleDateString("sv-SE");
+      document.getElementById("week-label").textContent = `${days[0].shortDate} — ${days[6].shortDate}`;
+
+      const grid = document.getElementById("week-grid");
+      grid.innerHTML = "";
+
+      days.forEach(d => {
+        const col = document.createElement("div");
+        col.className = "day-col" + (d.iso === todayIso ? " today" : "");
+
+        const regularForDay = scheduleItems.filter(s => Number(s.day) === d.weekday).map(s => ({ ...s, kind: "schedule" }));
+        const bookingsForDay = bookingItems.filter(b => b.date === d.iso).map(b => ({ ...b, kind: "bookings" }));
+        const allSlots = [...regularForDay, ...bookingsForDay].sort((a, b) => a.start.localeCompare(b.start));
+
+        let cardsHtml = allSlots.length === 0 ? `<div class="empty-day">Свободно</div>` : "";
+        allSlots.forEach(item => {
+          const isBooking = item.kind === "bookings";
+          const badgeHtml = isBooking ? `<span class="badge badge-booking">Разовая</span>` : `<span class="badge badge-regular">По расп.</span>`;
+          const canDelete = currentUser && (currentUser.role === "manager" || (isBooking && Number(item.userId) === Number(currentUser.id)));
+          const delBtn = canDelete ? `<button class="btn-del" onclick="deleteEntry('${item.kind}', ${item.id})">Удалить</button>` : "";
+
+          cardsHtml += `
+            <div class="slot-card ${isBooking ? "is-booking" : ""}">
+              <div class="slot-top">
+                <span class="slot-time">${item.start}–${item.end}</span>
+                ${badgeHtml}
+              </div>
+              <div class="slot-title">${escapeHtml(item.name)}</div>
+              <div class="slot-meta">${escapeHtml(sitesMap[item.siteId] || "")} • ${escapeHtml(item.roomName || "")}</div>
+              ${delBtn}
+            </div>
+          `;
+        });
+
+        col.innerHTML = `
+          <div class="day-header">
+            <div class="day-name">${d.name}</div>
+            <div class="day-date">${d.shortDate}</div>
+          </div>
+          <div class="day-body">${cardsHtml}</div>
+        `;
+        grid.appendChild(col);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    submitBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
+      showMessage("");
+      const rawTitle = nameEl.value.trim();
+      const finalTitle = rawTitle ? `${rawTitle} (${currentUser.fullName})` : `Занятие (${currentUser.fullName})`;
+
+      const body = { siteId: Number(formSite.value), start: startEl.value, end: endEl.value, name: finalTitle };
+      if (formMode === "bookings") body.date = formDate.value;
+      else body.day = Number(formDay.value);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/${formMode}`, {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMessage("Запись добавлена в календарь!", true);
+          nameEl.value = "";
+          lastRenderedHash = "";
+          loadAllData();
+        } else { showMessage(data.error || "Ошибка при сохранении"); }
+      } catch { showMessage("Сервер недоступен"); }
+    });
+
+    window.deleteEntry = async function(kind, id) {
+      if (!confirm("Удалить эту запись из расписания?")) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/${kind}/${id}`, { method: "DELETE", headers: authHeaders() });
+        if (res.ok) { lastRenderedHash = ""; loadAllData(); }
+        else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Нет прав на удаление");
+        }
+      } catch { alert("Ошибка сети при удалении"); }
+    };
+
+    filterSite.addEventListener("change", () => { lastRenderedHash = ""; loadAllData(); });
+
+    async function init() {
+      await loadSites();
+      await checkSession();
+      await loadAllData();
+    }
+    init();
+    setInterval(loadAllData, 30000);
+  </script>
+</body>
 </html>
