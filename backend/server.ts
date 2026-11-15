@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
@@ -380,12 +382,24 @@ const server = createServer(async (req, res) => {
       db.prepare("DELETE FROM schedule_slots WHERE id = ?").run(Number(path.split("/").pop()));
       return send(res, 204);
     }
+    // Отдача фронтенда с сервера по прямой ссылке
+    if (method === "GET" && (path === "/" || path === "/index.html")) {
+      let html: string | null = null;
+      for (const p of [join(process.cwd(), "frontend", "index.html"), join(process.cwd(), "..", "frontend", "index.html")]) {
+        try { html = readFileSync(p, "utf-8"); break; } catch {}
+      }
+      if (!html) return send(res, 404, { error: "Файл index.html не найден" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(html);
+      return;
+    }
 
     send(res, 404, { error: "Not found" });
   } catch (err) {
     send(res, 500, { error: "Внутренняя ошибка сервера" });
   }
 });
+
 
 server.listen(3000, () => {
   console.log("🚀 Бэкенд iTeen Academy запущен: http://171.22.30");
