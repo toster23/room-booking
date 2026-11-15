@@ -281,9 +281,14 @@ const server = createServer(async (req, res) => {
       return send(res, 204);
     }
 
-    if (method === "GET" && path === "/api/sites") {
+        if (method === "GET" && path === "/api/sites") {
       return send(res, 200, db.prepare("SELECT * FROM sites").all());
     }
+
+    if (method === "GET" && path === "/api/rooms") {
+      return send(res, 200, db.prepare("SELECT * FROM rooms ORDER BY id ASC").all());
+    }
+
 
     if (method === "GET" && path === "/api/bookings") {
       const date = url.searchParams.get("date");
@@ -295,17 +300,20 @@ const server = createServer(async (req, res) => {
       return send(res, 200, db.prepare(query + " ORDER BY bookings.date ASC, bookings.start_time ASC").all(...params));
     }
 
-    if (method === "POST" && path === "/api/bookings") {
+        if (method === "POST" && path === "/api/bookings") {
       const authUser = getAuthUser(db, req);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
 
       const data: any = await readJson(req).catch(() => null);
       if (!data) return send(res, 400, { error: "Некорректный JSON" });
-      const { siteId, date, start, end, name } = data;
+      const { siteId, roomId, date, start, end, name } = data;
       if (!siteId || !date || !start || !end || !name) return send(res, 422, { error: "Все поля обязательны" });
       if (!DATE_RE.test(date) || !TIME_RE.test(start) || !TIME_RE.test(end) || end <= start) return send(res, 422, { error: "Неверные данные" });
 
-      const rooms = db.prepare("SELECT id FROM rooms WHERE site_id = ?").all(siteId) as { id: number }[];
+      const rooms = roomId
+        ? (db.prepare("SELECT id FROM rooms WHERE id = ? AND site_id = ?").all(Number(roomId), Number(siteId)) as { id: number }[])
+        : (db.prepare("SELECT id FROM rooms WHERE site_id = ?").all(Number(siteId)) as { id: number }[]);
+
       let freeRoomId: number | null = null;
       let reason: string | null = null;
 
@@ -313,7 +321,7 @@ const server = createServer(async (req, res) => {
         reason = whyBusy(r.id, date, start, end);
         if (!reason) { freeRoomId = r.id; break; }
       }
-      if (!freeRoomId) return send(res, 409, { error: `Все аудитории заняты: ${reason}` });
+      if (!freeRoomId) return send(res, 409, { error: roomId ? `Выбранный кабинет занят: ${reason}` : `Все аудитории заняты: ${reason}` });
 
       add(
         "INSERT INTO bookings (room_id, user_id, date, start_time, end_time, purpose) VALUES (?, ?, ?, ?, ?, ?)",
@@ -345,7 +353,7 @@ const server = createServer(async (req, res) => {
       return send(res, 200, db.prepare(query + " ORDER BY schedule_slots.weekday ASC, schedule_slots.start_time ASC").all(...params));
     }
 
-    if (method === "POST" && path === "/api/schedule") {
+        if (method === "POST" && path === "/api/schedule") {
       const authUser = getAuthUser(db, req);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
       if (authUser.role !== "manager") {
@@ -354,16 +362,20 @@ const server = createServer(async (req, res) => {
 
       const data: any = await readJson(req).catch(() => null);
       if (!data) return send(res, 400, { error: "Некорректный JSON" });
-      const { siteId, day, start, end, name } = data;
+      const { siteId, roomId, day, start, end, name } = data;
       if (!siteId || day === undefined || !start || !end || !name) return send(res, 422, { error: "Все поля обязательны" });
+      if (!TIME_RE.test(start) || !TIME_RE.test(end) || end <= start) return send(res, 422, { error: "Неверное время" });
 
-      const rooms = db.prepare("SELECT id FROM rooms WHERE site_id = ?").all(siteId) as { id: number }[];
+      const rooms = roomId
+        ? (db.prepare("SELECT id FROM rooms WHERE id = ? AND site_id = ?").all(Number(roomId), Number(siteId)) as { id: number }[])
+        : (db.prepare("SELECT id FROM rooms WHERE site_id = ?").all(Number(siteId)) as { id: number }[]);
+
       let freeRoomId: number | null = null;
       for (const r of rooms) {
         const busy = db.prepare("SELECT id FROM schedule_slots WHERE room_id = ? AND weekday = ? AND ? < end_time AND ? > start_time").get(r.id, day, start, end);
         if (!busy) { freeRoomId = r.id; break; }
       }
-      if (!freeRoomId) return send(res, 409, { error: "Все аудитории филиала на это время заняты" });
+      if (!freeRoomId) return send(res, 409, { error: roomId ? "Выбранный кабинет на это время занят" : "Все аудитории филиала на это время заняты" });
 
       add(
         "INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)",
@@ -382,6 +394,7 @@ const server = createServer(async (req, res) => {
       db.prepare("DELETE FROM schedule_slots WHERE id = ?").run(Number(path.split("/").pop()));
       return send(res, 204);
     }
+
     // Отдача фронтенда с сервера по прямой ссылке
     if (method === "GET" && (path === "/" || path === "/index.html")) {
       let html: string | null = null;
