@@ -103,7 +103,6 @@ const t10 = add("INSERT INTO teachers (full_name) VALUES (?)", "Светлана
 const t11 = add("INSERT INTO teachers (full_name) VALUES (?)", "Дарья Я.");
 const t12 = add("INSERT INTO teachers (full_name) VALUES (?)", "Антон С.");
 const t13 = add("INSERT INTO teachers (full_name) VALUES (?)", "Евгений П.");
-const t14 = add("INSERT INTO teachers (full_name) VALUES (?)", "Светлана М.");
 
 // Тестовое расписание
 add(
