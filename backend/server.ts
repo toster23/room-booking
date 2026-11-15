@@ -230,8 +230,17 @@ const server = createServer(async (req, res) => {
 
 		if (method === "OPTIONS") return send(res, 204);
 
+		// Справочники: Площадки, Менеджеры и Преподаватели из БД
 		if (method === "GET" && path === "/api/sites") {
 			return send(res, 200, db.prepare("SELECT * FROM sites").all());
+		}
+
+		if (method === "GET" && path === "/api/managers") {
+			return send(res, 200, db.prepare("SELECT * FROM managers").all());
+		}
+
+		if (method === "GET" && path === "/api/teachers") {
+			return send(res, 200, db.prepare("SELECT * FROM teachers").all());
 		}
 
 		// === РАЗОВЫЕ БРОНИ ===
@@ -391,6 +400,7 @@ const server = createServer(async (req, res) => {
 		send(res, 500, { error: "Внутренняя ошибка сервера" });
 	}
 });
+
 
 // Запуск сервера с выводом прямого адреса
 server.listen(3000, () => {});
