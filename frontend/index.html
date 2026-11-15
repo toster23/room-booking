@@ -272,7 +272,7 @@ body {
 	padding: 24px 28px;
 	box-shadow: var(--shadow);
 	margin-bottom: 20px;
-	overflow: hidden;
+	overflow: visible;
 }
 .panel::after {
 	/* пунктирная «орбита» в углу */
@@ -299,7 +299,7 @@ body {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
 	gap: 14px;
-	align-items: end;
+	align-items: start;
 }
 .span-2 {
 	grid-column: span 2;
@@ -719,6 +719,227 @@ select:focus-visible {
 		scroll-behavior: auto !important;
 	}
 }
+.btn-secondary {
+	height: 40px;
+	padding: 0 18px;
+	background: var(--sky-light);
+	color: var(--sky-deep);
+	border: 1.5px solid var(--sky);
+	border-radius: 99px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	cursor: pointer;
+	transition: background 0.18s, color 0.18s, transform 0.18s;
+}
+.btn-secondary:hover {
+	background: var(--sky);
+	color: #fff;
+	transform: translateY(-1px);
+}
+/* ========== Сдвоенный блок времени в стиле Авиасейлс ========== */
+.aviasales-time-group {
+	grid-column: span 2;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.aviasales-time-pills {
+	display: flex;
+	align-items: center;
+	background: #f5faff;
+	border: 2px solid var(--border);
+	border-radius: 14px;
+	height: 46px;
+	overflow: hidden;
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+.aviasales-time-pills:focus-within {
+	border-color: var(--sky);
+	background: #fff;
+	box-shadow: 0 0 0 4px rgba(71, 169, 245, 0.22);
+}
+.aviasales-time-pills input {
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	border-radius: 0 !important;
+	height: 100%;
+	width: 50%;
+	text-align: center;
+	font-weight: 700;
+	font-size: 15px;
+	padding: 0 8px;
+}
+.aviasales-divider {
+	width: 2px;
+	height: 24px;
+	background: var(--border);
+	flex-shrink: 0;
+}
+.duration-chips {
+	display: flex;
+	gap: 6px;
+}
+.chip-btn {
+	flex: 1;
+	padding: 4px 8px;
+	background: var(--sky-light);
+	color: var(--sky-deep);
+	border: 1px solid rgba(71, 169, 245, 0.4);
+	border-radius: 8px;
+	font-size: 11px;
+	font-weight: 800;
+	cursor: pointer;
+	transition: 0.15s;
+}
+.chip-btn:hover {
+	background: var(--sky);
+	color: #fff;
+}
+@media (max-width: 640px) {
+	.aviasales-time-group { grid-column: span 1; }
+}
+/* ========== Выбор диапазона времени в стиле Авиасейлс ========== */
+.aviasales-time-wrapper {
+	position: relative;
+	grid-column: span 2;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.aviasales-time-pills {
+	display: flex;
+	align-items: center;
+	background: #f5faff;
+	border: 2px solid var(--border);
+	border-radius: 14px;
+	height: 46px;
+	cursor: pointer;
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+.aviasales-time-pills:hover,
+.aviasales-time-pills.active {
+	border-color: var(--sky);
+	background: #fff;
+	box-shadow: 0 0 0 4px rgba(71, 169, 245, 0.22);
+}
+.aviasales-time-pills input {
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	height: 100%;
+	width: 50%;
+	text-align: center;
+	font-weight: 800;
+	font-size: 15px;
+	color: var(--navy);
+	cursor: pointer;
+	padding: 0;
+}
+.aviasales-divider {
+	width: 2px;
+	height: 24px;
+	background: var(--border);
+	flex-shrink: 0;
+}
+
+/* Выпадающая сетка выбора диапазона */
+.time-range-popover {
+	position: absolute;
+	top: 76px;
+	left: 0;
+	width: 340px;
+	background: #fff;
+	border-radius: 20px;
+	padding: 16px;
+	box-shadow: 0 20px 45px rgba(20, 49, 92, 0.25);
+	border: 2px solid var(--sky);
+	z-index: 200;
+}
+.popover-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+	font-size: 13px;
+	font-weight: 800;
+	color: var(--navy);
+}
+.popover-presets {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+.preset-pill {
+	flex: 1;
+	padding: 6px 8px;
+	background: var(--sky-light);
+	color: var(--sky-deep);
+	border: none;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 800;
+	cursor: pointer;
+	transition: 0.15s;
+}
+.preset-pill:hover {
+	background: var(--sky);
+	color: #fff;
+}
+.time-slots-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	row-gap: 6px;
+	column-gap: 0;
+	max-height: 220px;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+.t-cell {
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--text);
+	cursor: pointer;
+	user-select: none;
+	transition: background 0.12s, color 0.12s;
+}
+.t-cell:hover {
+	background: var(--sky-light);
+	border-radius: 10px;
+}
+/* Подсветка диапазона как на картинке Авиасейлс */
+.t-cell.in-range {
+	background: #ffedd5;
+	color: #9a3412;
+	border-radius: 0;
+}
+.t-cell.range-start {
+	background: #f97316 !important;
+	color: #fff !important;
+	border-radius: 10px 0 0 10px !important;
+}
+.t-cell.range-end {
+	background: #f97316 !important;
+	color: #fff !important;
+	border-radius: 0 10px 10px 0 !important;
+}
+.t-cell.range-start.range-end {
+	border-radius: 10px !important;
+}
+@media (max-width: 640px) {
+	.aviasales-time-wrapper { grid-column: span 1; }
+	.time-range-popover { width: 100%; }
+}
+
+
+
 
 		</style>
 	</head>
@@ -818,57 +1039,69 @@ select:focus-visible {
 				</div>
 			</div>
 
-			<div class="panel">
-				<div class="panel-title">
-					<span id="form-title"
-						>Новая разовая бронь (отобразится в календаре)</span
-					>
-				</div>
-				<div class="form-row">
-					<label
-						>Филиал
-						<select id="form-site"></select>
-					</label>
-					<label id="wrap-date"
-						>Дата
-						<input type="date" id="form-date" />
-					</label>
-					<label id="wrap-day" class="hidden"
-						>День недели
-						<select id="form-day">
-							<option value="1">Понедельник</option>
-							<option value="2">Вторник</option>
-							<option value="3">Среда</option>
-							<option value="4">Четверг</option>
-							<option value="5">Пятница</option>
-							<option value="6">Суббота</option>
-							<option value="7">Воскресенье</option>
-						</select>
-					</label>
-					<label
-						>Начало
-						<input type="time" id="start" value="10:00" />
-					</label>
-					<label
-						>Конец
-						<input type="time" id="end" value="11:30" />
-					</label>
-					<label
-						>Кто добавляет
-						<input type="text" id="form-creator" disabled />
-					</label>
-					<label class="span-2"
-						>Группа / Цель брони
-						<input
-							type="text"
-							id="name"
-							placeholder="Например: Python 1 год или Отработка"
-						/>
-					</label>
-					<button id="submit-btn" class="btn-primary">Добавить</button>
-				</div>
-				<div id="message"></div>
-			</div>
+			          <!-- Белая рамка-панель для формы добавления -->
+    <div class="panel">
+      <div class="panel-title">
+        <span id="form-title">Новая разовая бронь (отобразится в календаре)</span>
+      </div>
+      <div class="form-row">
+        <label>Филиал
+          <select id="form-site"></select>
+        </label>
+        <label>Кабинет
+          <select id="form-room">
+            <option value="">Любой свободный</option>
+          </select>
+        </label>
+        <label id="wrap-date">Дата
+          <input type="date" id="form-date" />
+        </label>
+        <label id="wrap-day" class="hidden">День недели
+          <select id="form-day">
+            <option value="1">Понедельник</option>
+            <option value="2">Вторник</option>
+            <option value="3">Среда</option>
+            <option value="4">Четверг</option>
+            <option value="5">Пятница</option>
+            <option value="6">Суббота</option>
+            <option value="7">Воскресенье</option>
+          </select>
+        </label>
+                        <div class="aviasales-time-wrapper" id="time-picker-box">
+          <span style="font-size:12px; font-weight:700; color:var(--navy); text-transform:uppercase;">Время (Начало — Конец)</span>
+          <div class="aviasales-time-pills" id="time-pills-trigger">
+            <input type="text" id="start" value="10:00"/>
+            <div class="aviasales-divider"></div>
+            <input type="text" id="end" value="11:40"/>
+          </div>
+
+          <div class="time-range-popover hidden" id="time-popover">
+            <div class="popover-header">
+              <span id="popover-step-text">Выберите начало занятия</span>
+              <button type="button" class="btn-switch-user" onclick="closeTimePopover()">Готово</button>
+            </div>
+            <div class="popover-presets">
+              <button type="button" class="preset-pill" onclick="applyPresetDuration(100)">+ 1ч 40м (до 5 кл.)</button>
+              <button type="button" class="preset-pill" onclick="applyPresetDuration(150)">+ 2ч 30м (старше 5 кл.)</button>
+            </div>
+            <div class="time-slots-grid" id="time-slots-grid"></div>
+          </div>
+        </div>
+
+
+        </label>
+        <label>Кто добавляет
+          <input type="text" id="form-creator" disabled />
+        </label>
+        <label class="span-2">Группа / Цель брони
+          <input type="text" id="name" placeholder="Например: Python 1 год или Отработка" />
+        </label>
+        <button id="submit-btn" class="btn-primary">Добавить</button>
+      </div>
+      <div id="message"></div>
+    </div>
+
+
 
 			<div class="panel">
 				<div class="calendar-toolbar">
@@ -891,10 +1124,14 @@ select:focus-visible {
 							<span><i class="dot-regular"></i> Недельное расписание</span>
 							<span><i class="dot-booking"></i> Разовая бронь</span>
 						</div>
-						<select id="filter-site" style="height: 36px">
-							<option value="">Все филиалы</option>
-						</select>
-					</div>
+						<label style="flex-direction: row; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="filter-mine" style="width: 16px; height: 16px;" />
+            Только мои записи
+          </label>
+          <select id="filter-site" style="height: 36px">
+            <option value="">Все филиалы</option>
+          </select>
+        </div>
 				</div>
 
 				<div class="week-grid" id="week-grid"></div>
@@ -1119,7 +1356,7 @@ select:focus-visible {
       document.getElementById("status-text").textContent = ok ? "Подключено к серверу iTeen" : "Нет связи с сервером";
     }
 
-    async function loadAllData() {
+        async function loadAllData() {
       try {
         const siteQuery = filterSite.value ? `?siteId=${filterSite.value}` : "";
         const [resSched, resBook] = await Promise.all([
@@ -1128,15 +1365,32 @@ select:focus-visible {
         ]);
         const scheduleItems = await resSched.json();
         const bookingItems = await resBook.json();
-
         setConnected(true);
-        const currentHash = JSON.stringify({ scheduleItems, bookingItems, weekOffset, userId: currentUser?.id, role: currentUser?.role });
+
+        let filteredSched = scheduleItems;
+        let filteredBook = bookingItems;
+
+        if (filterMine && filterMine.checked && currentUser) {
+          const myName = currentUser.fullName.toLowerCase();
+          filteredSched = scheduleItems.filter(s => s.name.toLowerCase().includes(myName));
+          filteredBook = bookingItems.filter(b =>
+            Number(b.userId) === Number(currentUser.id) || b.name.toLowerCase().includes(myName)
+          );
+        }
+
+        const currentHash = JSON.stringify({
+          filteredSched, filteredBook, weekOffset,
+          userId: currentUser?.id, role: currentUser?.role, onlyMine: filterMine?.checked
+        });
         if (currentHash === lastRenderedHash) return;
         lastRenderedHash = currentHash;
 
-        renderWeekCalendar(scheduleItems, bookingItems);
-      } catch { setConnected(false); }
+        renderWeekCalendar(filteredSched, filteredBook);
+      } catch {
+        setConnected(false);
+      }
     }
+
     function renderWeekCalendar(scheduleItems, bookingItems) {
       const days = getWeekDays(weekOffset);
       const todayIso = new Date().toLocaleDateString("sv-SE");
@@ -1232,9 +1486,120 @@ select:focus-visible {
       await loadSites();
       await checkSession();
       await loadAllData();
+			if (filterMine) {
+      filterMine.addEventListener("change", () => {
+        lastRenderedHash = "";
+        loadAllData();
+      });
+    }
+
     }
     init();
-    setInterval(loadAllData, 30000);
+		    // Умный ввод времени: можно печатать просто цифры (например 1630 -> 16:30)
+                   // ========== Гибридный выбор времени: ручной ввод + сетка с шагом 5 минут ==========
+    const timeTrigger = document.getElementById("time-pills-trigger");
+    const timePopover = document.getElementById("time-popover");
+    const timeGrid = document.getElementById("time-slots-grid");
+    const stepText = document.getElementById("popover-step-text");
+
+    // Генерируем слоты каждые 5 минут с 08:00 до 22:00 (можно выбрать любой промежуток)
+    const allTimeSlots = [];
+    for (let h = 8; h <= 22; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        if (h === 22 && m > 0) break;
+        allTimeSlots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      }
+    }
+
+    let isSelectingEnd = false;
+
+    function bindManualInput(el) {
+      el.addEventListener("input", () => {
+        let digits = el.value.replace(/\D/g, "").slice(0, 4);
+        el.value = digits.length >= 3 ? digits.slice(0, 2) + ":" + digits.slice(2) : digits;
+        renderTimeGrid();
+      });
+
+      el.addEventListener("blur", () => {
+        const m = el.value.match(/^(\d{1,2}):(\d{1,2})$/);
+        if (m) {
+          const hh = Math.min(23, Number(m[1]));
+          const mm = Math.min(59, Number(m[2]));
+          el.value = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+          renderTimeGrid();
+        }
+      });
+    }
+    bindManualInput(startEl);
+    bindManualInput(endEl);
+
+    function renderTimeGrid() {
+      const sVal = startEl.value;
+      const eVal = endEl.value;
+      timeGrid.innerHTML = allTimeSlots.map(t => {
+        let cls = "t-cell";
+        if (t === sVal) cls += " range-start";
+        if (!isSelectingEnd && t === eVal) cls += " range-end";
+        if (!isSelectingEnd && t > sVal && t < eVal) cls += " in-range";
+        return `<div class="${cls}" data-time="${t}">${t}</div>`;
+      }).join("");
+    }
+
+    // Свободный выбор любого диапазона двумя кликами
+    timeGrid.addEventListener("click", (e) => {
+      const cell = e.target.closest(".t-cell");
+      if (!cell) return;
+      const clicked = cell.dataset.time;
+
+      if (!isSelectingEnd || clicked <= startEl.value) {
+        // Первый клик: фиксируем начало
+        startEl.value = clicked;
+        isSelectingEnd = true;
+        stepText.textContent = `Начало ${clicked} — выберите конец`;
+        renderTimeGrid();
+      } else {
+        // Второй клик: фиксируем конец и закрашиваем диапазон
+        endEl.value = clicked;
+        isSelectingEnd = false;
+        stepText.textContent = "Выберите начало занятия";
+        renderTimeGrid();
+        setTimeout(closeTimePopover, 250);
+      }
+    });
+
+    function applyPresetDuration(mins, shouldClose = true) {
+      const m = startEl.value.match(/^(\d{2}):(\d{2})$/);
+      if (!m) return;
+      let total = Number(m[1]) * 60 + Number(m[2]) + mins;
+      if (total >= 24 * 60) total = 23 * 60 + 59;
+      endEl.value = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+      isSelectingEnd = false;
+      stepText.textContent = "Выберите начало занятия";
+      renderTimeGrid();
+      if (shouldClose) closeTimePopover();
+    }
+
+    function closeTimePopover() {
+      timePopover.classList.add("hidden");
+      timeTrigger.classList.remove("active");
+      isSelectingEnd = false;
+      stepText.textContent = "Выберите начало занятия";
+    }
+
+    timeTrigger.addEventListener("click", () => {
+      if (timePopover.classList.contains("hidden")) {
+        isSelectingEnd = false;
+        renderTimeGrid();
+        timePopover.classList.remove("hidden");
+        timeTrigger.classList.add("active");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!document.getElementById("time-picker-box").contains(e.target)) {
+        closeTimePopover();
+      }
+    });
   </script>
 </body>
 </html>
