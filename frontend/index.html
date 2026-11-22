@@ -1484,19 +1484,6 @@ select:focus-visible {
         grid.appendChild(col);
       });
     }
-
-
-        col.innerHTML = `
-          <div class="day-header">
-            <div class="day-name">${d.name}</div>
-            <div class="day-date">${d.shortDate}</div>
-          </div>
-          <div class="day-body">${cardsHtml}</div>
-        `;
-        grid.appendChild(col);
-      });
-    }
-
     function escapeHtml(str) {
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
