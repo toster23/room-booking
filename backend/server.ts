@@ -58,6 +58,8 @@ export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: Server
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
 
+  if (!isValidTokenSignature(token)) return null;
+
   const row = db.prepare(`
     SELECT users.id, users.full_name, users.login, users.role, users.must_change_password,
            sessions.expires_at, sessions.rotated_at
@@ -73,14 +75,6 @@ export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: Server
     db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
     return null;
   }
-
-  export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: ServerResponse): AuthUser | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
-  const token = authHeader.slice(7);
-
-  if (!isValidTokenSignature(token)) return null;
-
 
   if (now - row.rotated_at >= 60 * 60 * 1000 && res) {
     const newToken = createToken();
