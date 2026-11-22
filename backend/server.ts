@@ -1,8 +1,16 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual, createHmac } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+
+if (existsSync(".env")) {
+  for (const line of readFileSync(".env", "utf-8").split("\n")) {
+    const [k, ...v] = line.split("=");
+    if (k && v.length) process.env[k.trim()] = v.join("=").trim();
+  }
+}
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_dev_secret_change_me";
 
 export interface AuthUser {
   id: number;
@@ -18,6 +26,9 @@ export function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
+const DUMMY_HASH = hashPassword("dummy_password_timing_protection");
+
+
 export function verifyPassword(password: string, storedHash: string): boolean {
   const [salt, key] = storedHash.split(":");
   const keyBuffer = Buffer.from(key, "hex");
@@ -26,25 +37,57 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 export function createToken(): string {
-  return randomBytes(32).toString("hex");
+  const raw = randomBytes(24).toString("hex");
+  const sig = createHmac("sha256", JWT_SECRET).update(raw).digest("hex");
+  return `${raw}.${sig}`;
 }
 
-export function getAuthUser(db: DatabaseSync, req: IncomingMessage): AuthUser | null {
+export function isValidTokenSignature(token: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+  const [raw, sig] = parts;
+  const expectedSig = createHmac("sha256", JWT_SECRET).update(raw).digest("hex");
+  const a = Buffer.from(sig, "hex");
+  const b = Buffer.from(expectedSig, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+
+export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: ServerResponse): AuthUser | null {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
 
   const row = db.prepare(`
-    SELECT users.id, users.full_name, users.login, users.role, users.must_change_password, sessions.expires_at
+    SELECT users.id, users.full_name, users.login, users.role, users.must_change_password,
+           sessions.expires_at, sessions.rotated_at
     FROM sessions
     JOIN users ON users.id = sessions.user_id
     WHERE sessions.token = ?
-  `).get(token) as (AuthUser & { expires_at: number }) | undefined;
+  `).get(token) as (AuthUser & { expires_at: number; rotated_at: number }) | undefined;
 
   if (!row) return null;
-  if (Date.now() > row.expires_at) {
+  const now = Date.now();
+
+  if (now > row.expires_at) {
     db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
     return null;
+  }
+
+  export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: ServerResponse): AuthUser | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7);
+
+  if (!isValidTokenSignature(token)) return null;
+
+
+  if (now - row.rotated_at >= 60 * 60 * 1000 && res) {
+    const newToken = createToken();
+    const newExpiresAt = now + 7 * 24 * 60 * 60 * 1000;
+    db.prepare("UPDATE sessions SET token = ?, expires_at = ?, rotated_at = ? WHERE token = ?")
+      .run(newToken, newExpiresAt, now, token);
+    res.setHeader("X-New-Token", newToken);
   }
 
   return {
@@ -72,7 +115,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at INTEGER NOT NULL
+    expires_at INTEGER NOT NULL,
+    rotated_at INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS schedule_slots (
     id INTEGER PRIMARY KEY,
@@ -138,8 +182,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Expose-Headers": "X-New-Token",
 };
 
 function send(res: ServerResponse, status: number, data?: unknown): void {
@@ -183,24 +228,6 @@ function whyBusy(roomId: number, date: string, start: string, end: string): stri
 }
 
 const loginAttempts = new Map<string, { count: number; blockUntil: number }>();
-
-function checkRateLimit(ip: string): string | null {
-  const rec = loginAttempts.get(ip);
-  if (!rec) return null;
-  if (Date.now() < rec.blockUntil) {
-    const sec = Math.ceil((rec.blockUntil - Date.now()) / 1000);
-    return `Слишком много попыток входа. Повторите через ${sec} сек.`;
-  }
-  if (Date.now() >= rec.blockUntil && rec.count >= 5) {
-    loginAttempts.delete(ip);
-  }
-  return null;
-}
-
-
-const loginAttempts = new Map<string, { count: number; blockUntil: number }>();
-
-
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -209,7 +236,7 @@ const server = createServer(async (req, res) => {
 
     if (method === "OPTIONS") return send(res, 204);
 
-      if (method === "POST" && path === "/api/login") {
+        if (method === "POST" && path === "/api/login") {
       const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown");
       const rec = loginAttempts.get(ip);
       if (rec && Date.now() < rec.blockUntil) {
@@ -219,6 +246,39 @@ const server = createServer(async (req, res) => {
       if (rec && Date.now() >= rec.blockUntil && rec.count >= 5) {
         loginAttempts.delete(ip);
       }
+
+      const data: any = await readJson(req).catch(() => null);
+      if (!data?.login || !data?.password) return send(res, 400, { error: "Введите логин и пароль" });
+
+      const user = db.prepare("SELECT * FROM users WHERE login = ?").get(data.login.toLowerCase().trim()) as any;
+      const hashToCheck = user ? user.password_hash : DUMMY_HASH;
+      const isPasswordValid = verifyPassword(data.password, hashToCheck);
+
+      if (!user || !isPasswordValid) {
+        const current = loginAttempts.get(ip) || { count: 0, blockUntil: 0 };
+        current.count += 1;
+        if (current.count >= 5) current.blockUntil = Date.now() + 5 * 60 * 1000;
+        loginAttempts.set(ip, current);
+        return send(res, 401, { error: "Неверный логин или пароль" });
+      }
+
+      loginAttempts.delete(ip);
+      const token = createToken();
+      const now = Date.now();
+      const expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+      add("INSERT INTO sessions (token, user_id, expires_at, rotated_at) VALUES (?, ?, ?, ?)", token, user.id, expiresAt, now);
+
+      return send(res, 200, {
+        token,
+        user: {
+          id: user.id,
+          fullName: user.full_name,
+          login: user.login,
+          role: user.role,
+          mustChangePassword: Boolean(user.must_change_password),
+        },
+      });
+    }
 
       const data: any = await readJson(req).catch(() => null);
       if (!data?.login || !data?.password) return send(res, 400, { error: "Введите логин и пароль" });
@@ -234,8 +294,9 @@ const server = createServer(async (req, res) => {
 
       loginAttempts.delete(ip);
       const token = createToken();
-      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
-      add("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)", token, user.id, expiresAt);
+      const now = Date.now();
+      const expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+      add("INSERT INTO sessions (token, user_id, expires_at, rotated_at) VALUES (?, ?, ?, ?)", token, user.id, expiresAt, now);
 
       return send(res, 200, {
         token,
@@ -249,9 +310,8 @@ const server = createServer(async (req, res) => {
       });
     }
 
-
     if (method === "GET" && path === "/api/me") {
-      const user = getAuthUser(db, req);
+      const user = getAuthUser(db, req, res);
       if (!user) return send(res, 401, { error: "Не авторизован" });
       return send(res, 200, {
         id: user.id,
@@ -262,8 +322,8 @@ const server = createServer(async (req, res) => {
       });
     }
 
-    if (method === "POST" && path === "/api/") {
-      const authUser = getAuthUser(db, req);
+    if (method === "POST" && path === "/api/change-password") {
+      const authUser = getAuthUser(db, req, res);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
 
       const data: any = await readJson(req).catch(() => null);
@@ -275,39 +335,9 @@ const server = createServer(async (req, res) => {
         return send(res, 422, { error: "Придумайте более надёжный пароль, отличный от стандартного" });
       }
 
-      const newHash = hashPassword(newPassword);
-      db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?").run(newHash, authUser.id);
+      db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?")
+        .run(hashPassword(newPassword), authUser.id);
       return send(res, 200, { success: true });
-    }
-
-
-    if (method === "POST" && path === "/api/users") {
-      const authUser = getAuthUser(db, req);
-      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
-      if (authUser.role !== "manager") {
-        return send(res, 403, { error: "Создавать пользователей могут только менеджеры" });
-      }
-
-      const data: any = await readJson(req).catch(() => null);
-      const fullName = sanitizeTitle(String(data?.fullName ?? ""));
-      const login = String(data?.login ?? "").toLowerCase().trim();
-      const password = String(data?.password ?? "").trim() || "123456";
-      const role = data?.role === "manager" ? "manager" : "teacher";
-
-      if (!fullName || !login) {
-        return send(res, 422, { error: "Укажите имя (например, Артем.Д) и логин" });
-      }
-
-      const exists = db.prepare("SELECT id FROM users WHERE login = ?").get(login);
-      if (exists) {
-        return send(res, 409, { error: "Пользователь с таким логином уже существует" });
-      }
-
-      const id = add(
-        "INSERT INTO users (full_name, login, password_hash, role, must_change_password) VALUES (?, ?, ?, ?, 1)",
-        fullName, login, hashPassword(password), role
-      );
-      return send(res, 201, { id, fullName, login, role });
     }
 
     if (method === "POST" && path === "/api/logout") {
@@ -318,14 +348,62 @@ const server = createServer(async (req, res) => {
       return send(res, 204);
     }
 
-        if (method === "GET" && path === "/api/sites") {
+    // === УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ И РОЛЯМИ (ТОЛЬКО МЕНЕДЖЕР) ===
+    if (method === "GET" && path === "/api/users") {
+      const authUser = getAuthUser(db, req, res);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+      if (authUser.role !== "manager") return send(res, 403, { error: "Менять роли могут только менеджеры" });
+
+      const users = db.prepare("SELECT id, full_name AS fullName, login, role FROM users ORDER BY role ASC, full_name ASC").all();
+      return send(res, 200, users);
+    }
+
+    if (method === "POST" && path === "/api/users") {
+      const authUser = getAuthUser(db, req, res);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+      if (authUser.role !== "manager") return send(res, 403, { error: "Создавать пользователей могут только менеджеры" });
+
+      const data: any = await readJson(req).catch(() => null);
+      const fullName = sanitizeTitle(String(data?.fullName ?? ""));
+      const login = String(data?.login ?? "").toLowerCase().trim();
+      const password = String(data?.password ?? "").trim() || "123456";
+      const role = data?.role === "manager" ? "manager" : "teacher";
+
+      if (!fullName || !login) return send(res, 422, { error: "Укажите имя и логин" });
+      if (db.prepare("SELECT id FROM users WHERE login = ?").get(login)) {
+        return send(res, 409, { error: "Пользователь с таким логином уже существует" });
+      }
+
+      const id = add(
+        "INSERT INTO users (full_name, login, password_hash, role, must_change_password) VALUES (?, ?, ?, ?, 1)",
+        fullName, login, hashPassword(password), role
+      );
+      return send(res, 201, { id, fullName, login, role });
+    }
+
+    if (method === "PATCH" && path.startsWith("/api/users/") && path.endsWith("/role")) {
+      const authUser = getAuthUser(db, req, res);
+      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+      if (authUser.role !== "manager") return send(res, 403, { error: "Менять роли могут только менеджеры" });
+
+      const targetId = Number(path.split("/")[3]);
+      if (targetId === authUser.id) return send(res, 400, { error: "Нельзя изменить роль самому себе" });
+
+      const data: any = await readJson(req).catch(() => null);
+      const newRole = data?.role === "manager" ? "manager" : data?.role === "teacher" ? "teacher" : null;
+      if (!newRole) return send(res, 422, { error: "Некорректная роль" });
+
+      db.prepare("UPDATE users SET role = ? WHERE id = ?").run(newRole, targetId);
+      return send(res, 200, { success: true });
+    }
+    // === ПРОСМОТР КАБИНЕТОВ И БРОНЕЙ (ДОСТУПНО ВСЕМ, ВКЛЮЧАЯ ГОСТЯ) ===
+    if (method === "GET" && path === "/api/sites") {
       return send(res, 200, db.prepare("SELECT * FROM sites").all());
     }
 
     if (method === "GET" && path === "/api/rooms") {
       return send(res, 200, db.prepare("SELECT * FROM rooms ORDER BY id ASC").all());
     }
-
 
     if (method === "GET" && path === "/api/bookings") {
       const date = url.searchParams.get("date");
@@ -337,15 +415,16 @@ const server = createServer(async (req, res) => {
       return send(res, 200, db.prepare(query + " ORDER BY bookings.date ASC, bookings.start_time ASC").all(...params));
     }
 
-        if (method === "POST" && path === "/api/bookings") {
-      const authUser = getAuthUser(db, req);
-      if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
+    // === СОЗДАНИЕ И УДАЛЕНИЕ БРОНЕЙ ===
+    if (method === "POST" && path === "/api/bookings") {
+      const authUser = getAuthUser(db, req, res);
+      if (!authUser) return send(res, 401, { error: "Войдите в систему, чтобы создать бронь" });
 
       const data: any = await readJson(req).catch(() => null);
       if (!data) return send(res, 400, { error: "Некорректный JSON" });
       const { siteId, roomId, date, start, end, name } = data;
       if (!siteId || !date || !start || !end || !name) return send(res, 422, { error: "Все поля обязательны" });
-      if (!DATE_RE.test(date) || !TIME_RE.test(start) || !TIME_RE.test(end) || end <= start) return send(res, 422, { error: "Неверные данные" });
+      if (!DATE_RE.test(date) || !TIME_RE.test(start) || !TIME_RE.test(end) || end <= start) return send(res, 422, { error: "Неверный формат даты или времени" });
 
       const rooms = roomId
         ? (db.prepare("SELECT id FROM rooms WHERE id = ? AND site_id = ?").all(Number(roomId), Number(siteId)) as { id: number }[])
@@ -353,7 +432,6 @@ const server = createServer(async (req, res) => {
 
       let freeRoomId: number | null = null;
       let reason: string | null = null;
-
       for (const r of rooms) {
         reason = whyBusy(r.id, date, start, end);
         if (!reason) { freeRoomId = r.id; break; }
@@ -368,20 +446,21 @@ const server = createServer(async (req, res) => {
     }
 
     if (method === "DELETE" && path.startsWith("/api/bookings/")) {
-      const authUser = getAuthUser(db, req);
+      const authUser = getAuthUser(db, req, res);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
 
       const id = Number(path.split("/").pop());
       const row = db.prepare("SELECT user_id FROM bookings WHERE id = ?").get(id) as { user_id: number } | undefined;
       if (!row) return send(res, 404, { error: "Бронь не найдена" });
       if (authUser.role !== "manager" && row.user_id !== authUser.id) {
-        return send(res, 403, { error: "Вы можете удалять только свои брони" });
+        return send(res, 403, { error: "Запрещено! Вы можете отменить только свою бронь" });
       }
 
       db.prepare("DELETE FROM bookings WHERE id = ?").run(id);
       return send(res, 204);
     }
 
+    // === НЕДЕЛЬНОЕ РАСПИСАНИЕ ===
     if (method === "GET" && path === "/api/schedule") {
       const siteId = url.searchParams.get("siteId");
       let query = "SELECT schedule_slots.id, schedule_slots.start_time AS start, schedule_slots.end_time AS end, schedule_slots.title AS name, schedule_slots.weekday AS day, rooms.site_id AS siteId, rooms.name AS roomName FROM schedule_slots JOIN rooms ON rooms.id = schedule_slots.room_id WHERE 1=1";
@@ -390,12 +469,10 @@ const server = createServer(async (req, res) => {
       return send(res, 200, db.prepare(query + " ORDER BY schedule_slots.weekday ASC, schedule_slots.start_time ASC").all(...params));
     }
 
-        if (method === "POST" && path === "/api/schedule") {
-      const authUser = getAuthUser(db, req);
+    if (method === "POST" && path === "/api/schedule") {
+      const authUser = getAuthUser(db, req, res);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
-      if (authUser.role !== "manager") {
-        return send(res, 403, { error: "Запрещено! Недельное расписание могут редактировать только менеджеры" });
-      }
+      if (authUser.role !== "manager") return send(res, 403, { error: "Запрещено! Только менеджер меняет сетку" });
 
       const data: any = await readJson(req).catch(() => null);
       if (!data) return send(res, 400, { error: "Некорректный JSON" });
@@ -412,7 +489,7 @@ const server = createServer(async (req, res) => {
         const busy = db.prepare("SELECT id FROM schedule_slots WHERE room_id = ? AND weekday = ? AND ? < end_time AND ? > start_time").get(r.id, day, start, end);
         if (!busy) { freeRoomId = r.id; break; }
       }
-      if (!freeRoomId) return send(res, 409, { error: roomId ? "Выбранный кабинет на это время занят" : "Все аудитории филиала на это время заняты" });
+      if (!freeRoomId) return send(res, 409, { error: roomId ? "Выбранный кабинет на это время занят" : "Все аудитории филиала заняты" });
 
       add(
         "INSERT INTO schedule_slots (room_id, teacher_id, weekday, start_time, end_time, title) VALUES (?, ?, ?, ?, ?, ?)",
@@ -422,17 +499,15 @@ const server = createServer(async (req, res) => {
     }
 
     if (method === "DELETE" && path.startsWith("/api/schedule/")) {
-      const authUser = getAuthUser(db, req);
+      const authUser = getAuthUser(db, req, res);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
-      if (authUser.role !== "manager") {
-        return send(res, 403, { error: "Удалять из недельного расписания могут только менеджеры" });
-      }
+      if (authUser.role !== "manager") return send(res, 403, { error: "Запрещено! Только менеджер удаляет из сетки" });
 
       db.prepare("DELETE FROM schedule_slots WHERE id = ?").run(Number(path.split("/").pop()));
       return send(res, 204);
     }
 
-    // Отдача фронтенда с сервера по прямой ссылке
+    // Отдача фронтенда с сервера
     if (method === "GET" && (path === "/" || path === "/index.html")) {
       let html: string | null = null;
       for (const p of [join(process.cwd(), "frontend", "index.html"), join(process.cwd(), "..", "frontend", "index.html")]) {
@@ -450,7 +525,6 @@ const server = createServer(async (req, res) => {
   }
 });
 
-
 server.listen(3000, () => {
-  console.log("🚀 Бэкенд iTeen Academy запущен: http://171.22.30");
+  console.log("🚀 Бэкенд iTeen Academy запущен: http://171.22.30.57:3000");
 });
