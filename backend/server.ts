@@ -93,6 +93,7 @@ export function getAuthUser(db: DatabaseSync, req: IncomingMessage, res?: Server
   };
 }
 
+
 const db = new DatabaseSync("booking.db");
 
 db.exec(`
