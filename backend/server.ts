@@ -198,6 +198,9 @@ function checkRateLimit(ip: string): string | null {
 }
 
 
+const loginAttempts = new Map<string, { count: number; blockUntil: number }>();
+
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
