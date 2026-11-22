@@ -181,6 +181,23 @@ function whyBusy(roomId: number, date: string, start: string, end: string): stri
 
   return null;
 }
+
+const loginAttempts = new Map<string, { count: number; blockUntil: number }>();
+
+function checkRateLimit(ip: string): string | null {
+  const rec = loginAttempts.get(ip);
+  if (!rec) return null;
+  if (Date.now() < rec.blockUntil) {
+    const sec = Math.ceil((rec.blockUntil - Date.now()) / 1000);
+    return `Слишком много попыток входа. Повторите через ${sec} сек.`;
+  }
+  if (Date.now() >= rec.blockUntil && rec.count >= 5) {
+    loginAttempts.delete(ip);
+  }
+  return null;
+}
+
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -189,15 +206,30 @@ const server = createServer(async (req, res) => {
 
     if (method === "OPTIONS") return send(res, 204);
 
-    if (method === "POST" && path === "/api/login") {
+      if (method === "POST" && path === "/api/login") {
+      const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown");
+      const rec = loginAttempts.get(ip);
+      if (rec && Date.now() < rec.blockUntil) {
+        const sec = Math.ceil((rec.blockUntil - Date.now()) / 1000);
+        return send(res, 429, { error: `Слишком много попыток входа. Повторите через ${sec} сек.` });
+      }
+      if (rec && Date.now() >= rec.blockUntil && rec.count >= 5) {
+        loginAttempts.delete(ip);
+      }
+
       const data: any = await readJson(req).catch(() => null);
       if (!data?.login || !data?.password) return send(res, 400, { error: "Введите логин и пароль" });
 
       const user = db.prepare("SELECT * FROM users WHERE login = ?").get(data.login.toLowerCase().trim()) as any;
       if (!user || !verifyPassword(data.password, user.password_hash)) {
+        const current = loginAttempts.get(ip) || { count: 0, blockUntil: 0 };
+        current.count += 1;
+        if (current.count >= 5) current.blockUntil = Date.now() + 5 * 60 * 1000;
+        loginAttempts.set(ip, current);
         return send(res, 401, { error: "Неверный логин или пароль" });
       }
 
+      loginAttempts.delete(ip);
       const token = createToken();
       const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
       add("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)", token, user.id, expiresAt);
@@ -214,6 +246,7 @@ const server = createServer(async (req, res) => {
       });
     }
 
+
     if (method === "GET" && path === "/api/me") {
       const user = getAuthUser(db, req);
       if (!user) return send(res, 401, { error: "Не авторизован" });
@@ -226,23 +259,24 @@ const server = createServer(async (req, res) => {
       });
     }
 
-    if (method === "POST" && path === "/api/change-password") {
+    if (method === "POST" && path === "/api/") {
       const authUser = getAuthUser(db, req);
       if (!authUser) return send(res, 401, { error: "Требуется авторизация" });
 
       const data: any = await readJson(req).catch(() => null);
       const newPassword = String(data?.newPassword ?? "").trim();
-      if (newPassword.length < 6) {
-        return send(res, 422, { error: "Новый пароль должен быть не короче 6 символов" });
+      if (newPassword.length < 8 || !/[a-zA-Zа-яА-ЯёЁ]/.test(newPassword) || !/\d/.test(newPassword)) {
+        return send(res, 422, { error: "Пароль должен быть от 8 символов и содержать буквы и цифры" });
       }
-      if (newPassword === "123456") {
-        return send(res, 422, { error: "Придумайте новый пароль, отличный от стандартного" });
+      if (newPassword === "123456" || newPassword === "12345678") {
+        return send(res, 422, { error: "Придумайте более надёжный пароль, отличный от стандартного" });
       }
 
       const newHash = hashPassword(newPassword);
       db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?").run(newHash, authUser.id);
       return send(res, 200, { success: true });
     }
+
 
     if (method === "POST" && path === "/api/users") {
       const authUser = getAuthUser(db, req);
