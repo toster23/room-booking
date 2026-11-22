@@ -937,6 +937,10 @@ select:focus-visible {
 	.aviasales-time-wrapper { grid-column: span 1; }
 	.time-range-popover { width: 100%; }
 }
+.form-row > .btn-primary {
+	align-self: end;
+}
+
 
 
 
@@ -1125,9 +1129,10 @@ select:focus-visible {
 							<span><i class="dot-booking"></i> Разовая бронь</span>
 						</div>
 						<label style="flex-direction: row; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-            <input type="checkbox" id="filter-mine" style="width: 16px; height: 16px;" />
-            Только мои записи
-          </label>
+      			<input type="checkbox" id="filter-mine" style="width: 16px; height: 16px;" />
+      			Только мои записи
+    				</label>
+
           <select id="filter-site" style="height: 36px">
             <option value="">Все филиалы</option>
           </select>
@@ -1145,7 +1150,7 @@ select:focus-visible {
 	</body>
 </html>
     <script>
-    const API_BASE = "http://171.22.30.57:3000";
+   const API_BASE = "";
     let formMode = "bookings";
     let authToken = localStorage.getItem("iteen_token") || "";
     let currentUser = null;
@@ -1162,6 +1167,8 @@ select:focus-visible {
     const nameEl = document.getElementById("name");
     const submitBtn = document.getElementById("submit-btn");
     const msgEl = document.getElementById("message");
+		const formRoom = document.getElementById("form-room");
+		const filterMine = document.getElementById("filter-mine");
 
     formDate.value = new Date().toLocaleDateString("sv-SE");
 
@@ -1391,7 +1398,7 @@ select:focus-visible {
       }
     }
 
-    function renderWeekCalendar(scheduleItems, bookingItems) {
+        function renderWeekCalendar(scheduleItems, bookingItems) {
       const days = getWeekDays(weekOffset);
       const todayIso = new Date().toLocaleDateString("sv-SE");
       document.getElementById("week-label").textContent = `${days[0].shortDate} — ${days[6].shortDate}`;
@@ -1403,29 +1410,81 @@ select:focus-visible {
         const col = document.createElement("div");
         col.className = "day-col" + (d.iso === todayIso ? " today" : "");
 
+        const dayHeader = document.createElement("div");
+        dayHeader.className = "day-header";
+
+        const dayName = document.createElement("div");
+        dayName.className = "day-name";
+        dayName.textContent = d.name;
+
+        const dayDate = document.createElement("div");
+        dayDate.className = "day-date";
+        dayDate.textContent = d.shortDate;
+
+        dayHeader.append(dayName, dayDate);
+
+        const dayBody = document.createElement("div");
+        dayBody.className = "day-body";
+
         const regularForDay = scheduleItems.filter(s => Number(s.day) === d.weekday).map(s => ({ ...s, kind: "schedule" }));
         const bookingsForDay = bookingItems.filter(b => b.date === d.iso).map(b => ({ ...b, kind: "bookings" }));
         const allSlots = [...regularForDay, ...bookingsForDay].sort((a, b) => a.start.localeCompare(b.start));
 
-        let cardsHtml = allSlots.length === 0 ? `<div class="empty-day">Свободно</div>` : "";
-        allSlots.forEach(item => {
-          const isBooking = item.kind === "bookings";
-          const badgeHtml = isBooking ? `<span class="badge badge-booking">Разовая</span>` : `<span class="badge badge-regular">По расп.</span>`;
-          const canDelete = currentUser && (currentUser.role === "manager" || (isBooking && Number(item.userId) === Number(currentUser.id)));
-          const delBtn = canDelete ? `<button class="btn-del" onclick="deleteEntry('${item.kind}', ${item.id})">Удалить</button>` : "";
+        if (allSlots.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty-day";
+          empty.textContent = "Свободно";
+          dayBody.appendChild(empty);
+        } else {
+          allSlots.forEach(item => {
+            const isBooking = item.kind === "bookings";
+            const card = document.createElement("div");
+            card.className = "slot-card" + (isBooking ? " is-booking" : "");
 
-          cardsHtml += `
-            <div class="slot-card ${isBooking ? "is-booking" : ""}">
-              <div class="slot-top">
-                <span class="slot-time">${item.start}–${item.end}</span>
-                ${badgeHtml}
-              </div>
-              <div class="slot-title">${escapeHtml(item.name)}</div>
-              <div class="slot-meta">${escapeHtml(sitesMap[item.siteId] || "")} • ${escapeHtml(item.roomName || "")}</div>
-              ${delBtn}
-            </div>
-          `;
-        });
+            const top = document.createElement("div");
+            top.className = "slot-top";
+
+            const timeSpan = document.createElement("span");
+            timeSpan.className = "slot-time";
+            timeSpan.textContent = `${item.start}–${item.end}`;
+
+            const badge = document.createElement("span");
+            badge.className = "badge " + (isBooking ? "badge-booking" : "badge-regular");
+            badge.textContent = isBooking ? "Разовая" : "По расп.";
+
+            top.append(timeSpan, badge);
+
+            const titleDiv = document.createElement("div");
+            titleDiv.className = "slot-title";
+            titleDiv.textContent = item.name;
+
+            const metaDiv = document.createElement("div");
+            metaDiv.className = "slot-meta";
+            metaDiv.textContent = `${sitesMap[item.siteId] || ""} • ${item.roomName || ""}`;
+
+            card.append(top, titleDiv, metaDiv);
+
+            const canDelete = currentUser && (
+              currentUser.role === "manager" ||
+              (isBooking && Number(item.userId) === Number(currentUser.id))
+            );
+            if (canDelete) {
+              const delBtn = document.createElement("button");
+              delBtn.className = "btn-del";
+              delBtn.textContent = "Отменить";
+              delBtn.onclick = () => deleteEntry(item.kind, item.id);
+              card.appendChild(delBtn);
+            }
+
+            dayBody.appendChild(card);
+          });
+        }
+
+        col.append(dayHeader, dayBody);
+        grid.appendChild(col);
+      });
+    }
+
 
         col.innerHTML = `
           <div class="day-header">
